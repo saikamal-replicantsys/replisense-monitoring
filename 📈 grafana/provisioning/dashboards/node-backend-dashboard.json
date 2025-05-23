@@ -1,0 +1,24 @@
+{
+    "id": null,
+    "title": "Node.js Metrics",
+    "tags": ["node", "express", "metrics"],
+    "timezone": "browser",
+    "schemaVersion": 30,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "HTTP Requests Total",
+        "targets": [
+          {
+            "expr": "http_requests_total",
+            "legendFormat": "{{method}} {{status}}",
+            "refId": "A"
+          }
+        ],
+        "id": 1
+      }
+    ]
+  }
+  
