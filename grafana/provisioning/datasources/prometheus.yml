@@ -1,3 +1,4 @@
+# Contains the configuration for the data source Graphana will use
 apiVersion: 1
 
 datasources:
