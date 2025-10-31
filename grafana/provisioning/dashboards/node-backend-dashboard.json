@@ -18,6 +18,18 @@
       "version": "12.0.1"
     },
     {
+      "type": "stat",
+      "title": "MCP Requests",
+      "targets": [
+        {
+          "expr": "mcp_requests_total",
+          "refId": "A"
+        }
+      ],
+      "id": 30
+    },
+    
+    {
       "type": "datasource",
       "id": "prometheus",
       "name": "Prometheus",
@@ -806,6 +818,7 @@
     "from": "now-1h",
     "to": "now"
   },
+  
   "timepicker": {},
   "timezone": "browser",
   "title": "Replisense dashboard",
