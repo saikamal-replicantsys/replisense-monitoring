@@ -1,0 +1,13 @@
+{
+  "integration": {
+    "uid": "replisense-qc-email",
+    "type": "email",
+    "version": "v1",
+    "disableResolveMessage": false,
+    "settings": {"addresses": "saikamal@replicantsys.com", "singleEmail": true}
+  },
+  "alert": {
+    "labels": {"alertname": "QC observability notification test", "environment": "qc", "severity": "info"},
+    "annotations": {"summary": "RepliSense QC monitoring email delivery test", "description": "A setup test only; no client document or application failure is involved."}
+  }
+}

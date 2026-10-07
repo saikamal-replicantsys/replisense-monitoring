@@ -1,0 +1,6 @@
+{
+  "apiVersion": "folder.grafana.app/v1",
+  "kind": "Folder",
+  "metadata": {"name": "replisense-qc", "namespace": "stacks-1859509"},
+  "spec": {"title": "RepliSense QC", "description": "QC evaluation operational monitoring. Sanitized telemetry only."}
+}

@@ -1,0 +1,48 @@
+groups:
+  - name: replisense-platform
+    rules:
+      - alert: ServiceMetricsUnavailable
+        expr: up{job=~"replisense-.*"} == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "Metrics unavailable: {{ $labels.job }} ({{ $labels.environment }})"
+          description: "Scraping failed; check connectivity, tokens and service health. Not proof the application is down."
+      - alert: PublicEndpointUnavailable
+        expr: probe_success{job="blackbox-http"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Endpoint probe failed: {{ $labels.service }} ({{ $labels.environment }})"
+          description: "HTTPS/status check failed for {{ $labels.instance }}."
+      - alert: CertificateExpiresSoon
+        expr: (probe_ssl_earliest_cert_expiry{job="blackbox-http"} - time()) < 86400 * 14
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "TLS certificate expires within 14 days ({{ $labels.environment }})"
+      - alert: ApiServerErrors
+        expr: sum by (environment, service) (increase(replisense_http_requests_total{status_code=~"5.."}[10m])) >= 3
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "Repeated server errors: {{ $labels.service }} ({{ $labels.environment }})"
+          description: "At least three HTTP 5xx responses in ten minutes; tuned for low-traffic QC."
+      - alert: QcJobFailed
+        expr: sum by (environment, worker) (increase(replisense_worker_jobs_failed_total{worker="qc-worker"}[10m])) > 0
+        labels: {severity: warning, service: qc-worker}
+        annotations:
+          summary: "QC job failure ({{ $labels.environment }})"
+          description: "Requires a separate worker metrics endpoint; Node API does not contain worker-process counters."
+      - alert: WorkerHeartbeatStale
+        expr: time() - replisense_worker_heartbeat_timestamp_seconds > 120
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Worker heartbeat stale: {{ $labels.worker }} ({{ $labels.environment }})"
+          description: "Only detects stale exported series, not a never-configured endpoint. Pair with scrape availability once worker endpoints exist."
+      - alert: MonitoringAlwaysOn
+        expr: vector(1)
+        labels: {severity: heartbeat, environment: monitoring}
+        annotations:
+          summary: "Monitoring heartbeat; route only to an external dead-man receiver"

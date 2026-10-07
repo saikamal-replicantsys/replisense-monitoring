@@ -1,0 +1,2 @@
+- targets: ["http://host.docker.internal:7001/health"]
+  labels: {environment: local, service: doc-engine, module: internal_health}

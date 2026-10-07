@@ -1,0 +1,22 @@
+name: Validate monitoring configuration
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      GRAFANA_ADMIN_PASSWORD: ci-validation-only-not-for-deployment
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m unittest discover -s tests -v
+      - run: python scripts/build_dashboard.py && git diff --exit-code -- grafana/dashboards/qc-operations.json
+      - run: python scripts/build_cloud_alerts.py && git diff --exit-code -- grafana/cloud
+      - run: docker compose -f alloy/compose.yaml config --quiet
+      - run: docker run --rm -v "$PWD/alloy:/etc/alloy:ro" grafana/alloy:v1.20.1 validate /etc/alloy/config.alloy
+      - run: docker compose config --quiet
+      - run: docker run --rm --entrypoint promtool -v "$PWD/prometheus:/etc/prometheus:ro" prom/prometheus:v3.11.2 check config /etc/prometheus/prometheus.yml
+      - run: docker run --rm --entrypoint promtool -v "$PWD/prometheus:/etc/prometheus:ro" prom/prometheus:v3.11.2 test rules /etc/prometheus/rule-tests.yml
+      - run: docker run --rm --entrypoint amtool -v "$PWD/alertmanager:/etc/alertmanager:ro" prom/alertmanager:v0.32.0 check-config /etc/alertmanager/alertmanager.yml

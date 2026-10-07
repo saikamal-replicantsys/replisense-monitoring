@@ -1,0 +1,23 @@
+modules:
+  http_2xx:
+    prober: http
+    timeout: 10s
+    http:
+      preferred_ip_protocol: ip4
+      method: GET
+      fail_if_not_ssl: true
+  api_unauthenticated:
+    prober: http
+    timeout: 10s
+    http:
+      preferred_ip_protocol: ip4
+      method: GET
+      valid_status_codes: [401]
+      fail_if_not_ssl: true
+      follow_redirects: false
+  internal_health:
+    prober: http
+    timeout: 10s
+    http:
+      preferred_ip_protocol: ip4
+      method: GET

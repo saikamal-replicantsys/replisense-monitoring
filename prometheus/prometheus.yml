@@ -1,13 +1,41 @@
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
-
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  evaluation_interval: 30s
+rule_files: ["/etc/prometheus/rules/platform-alerts.yml"]
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
 scrape_configs:
-  - job_name: "replisense-backend"
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels: {environment: local, service: prometheus}
+  - job_name: replisense-node-api
+    metrics_path: /metrics
     static_configs:
       - targets: ["host.docker.internal:5000"]
+        labels: {environment: local}
+    # For production-mode Node, mount a private token file; never expose metrics
+    # on CloudFront just to make laptop scraping convenient.
+    # authorization:
+    #   credentials_file: /run/secrets/observability_token
+  - job_name: replisense-python-gateway
     metrics_path: /metrics
-
-  - job_name: "mcp-server"
     static_configs:
-      - targets: ["host.docker.internal:9101"] # Exposed by start_http_server() in MCP
+      - targets: ["host.docker.internal:8002"]
+        labels: {environment: local}
+  - job_name: blackbox-http
+    metrics_path: /probe
+    file_sd_configs:
+      - files: ["/etc/prometheus/targets/*.yml"]
+    relabel_configs:
+      - source_labels: [module]
+        target_label: __param_module
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115

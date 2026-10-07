@@ -1,0 +1,11 @@
+# Safe default: NO notifications until email is configured. The application's
+# alertmanager webhook is a logging stub, not an email delivery service.
+global: {resolve_timeout: 5m}
+route:
+  receiver: disabled
+  group_by: [environment, alertname, service, worker, job]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+receivers:
+  - name: disabled

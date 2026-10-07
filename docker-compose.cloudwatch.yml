@@ -1,0 +1,10 @@
+# Optional LOCAL access to remote AWS logs; does not deploy AWS resources.
+services:
+  grafana:
+    environment:
+      AWS_SHARED_CREDENTIALS_FILE: /run/aws/credentials
+      AWS_PROFILE: monitoring
+      AWS_REGION: ap-south-1
+    volumes:
+      - ${AWS_MONITORING_CREDENTIALS_DIR:?Provide a dedicated monitoring credentials directory}:/run/aws:ro
+      - ./grafana/cloudwatch/cloudwatch.yml:/etc/grafana/provisioning/datasources/cloudwatch.yml:ro

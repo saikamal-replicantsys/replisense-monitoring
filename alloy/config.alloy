@@ -1,0 +1,132 @@
+logging {
+  level = "warn"
+}
+
+prometheus.remote_write "cloud" {
+  external_labels = { environment = "qc", application = "replisense" }
+  endpoint {
+    url = "https://prometheus-prod-43-prod-ap-south-1.grafana.net/api/prom/push"
+    basic_auth {
+      username = "3643241"
+      password_file = "/run/credentials/grafana-token"
+    }
+  }
+}
+
+prometheus.scrape "node" {
+  targets = [
+    { __address__ = "node-api:5000", job = "replisense-node-api", service = "node-api" },
+    { __address__ = "qc-worker:9102", job = "replisense-qc-worker", service = "qc-worker" },
+  ]
+  scrape_interval = "60s"
+  authorization {
+    type = "Bearer"
+    credentials_file = "/run/credentials/observability-token"
+  }
+  forward_to = [prometheus.relabel.safe.receiver]
+}
+
+prometheus.scrape "python" {
+  targets = [{ __address__ = "python-gateway:8002", job = "replisense-python-gateway", service = "python-gateway" }]
+  scrape_interval = "60s"
+  forward_to = [prometheus.relabel.safe.receiver]
+}
+
+prometheus.exporter.unix "host" {
+  procfs_path = "/host/proc"
+  set_collectors = ["cpu", "meminfo", "loadavg", "time"]
+}
+discovery.relabel "host" {
+  targets = prometheus.exporter.unix.host.targets
+  rule {
+    target_label = "job"
+    replacement = "replisense-host"
+  }
+  rule {
+    target_label = "instance"
+    replacement = "qc-compute"
+  }
+}
+prometheus.scrape "host" {
+  targets = discovery.relabel.host.output
+  scrape_interval = "60s"
+  forward_to = [prometheus.remote_write.cloud.receiver]
+}
+
+// Do not ship unrelated production-module metrics or unbounded identifiers.
+prometheus.relabel "safe" {
+  forward_to = [prometheus.remote_write.cloud.receiver]
+  rule {
+    source_labels = ["__name__"]
+    regex = "up|scrape_.*|replisense_http_.*|replisense_worker_.*|replisense_qc_(runs|issues_found|exports|export_duration).*|replisense_llm_.*|replisense_node_(process|nodejs)_.*|process_.*"
+    action = "keep"
+  }
+}
+
+prometheus.exporter.blackbox "qc" {
+  config_file = "/etc/alloy/blackbox.yml"
+  targets = [
+    { name = "qc-frontend", address = "https://qc.replicantsys.com", module = "http_2xx", service = "frontend" },
+    { name = "qc-api-edge", address = "https://qc.replicantsys.com/api/auth/refresh", module = "api_unauthenticated", service = "api-edge" },
+    { name = "qc-node-ready", address = "http://node-api:5000/ready", module = "node_ready", service = "node-dependencies" },
+    { name = "qc-document-engine", address = "http://doc-engine:7001/health", module = "internal_health", service = "document-engine" },
+    { name = "qc-redis", address = "redis:6379", module = "redis_tcp", service = "redis" },
+  ]
+}
+discovery.relabel "probes" {
+  targets = prometheus.exporter.blackbox.qc.targets
+  rule {
+    target_label = "job"
+    replacement = "blackbox-http"
+  }
+}
+prometheus.scrape "probes" {
+  targets = discovery.relabel.probes.output
+  scrape_interval = "60s"
+  forward_to = [prometheus.remote_write.cloud.receiver]
+}
+
+local.file_match "ops" {
+  path_targets = [{ __path__ = "/var/log/replisense-ops/*/events.jsonl", job = "replisense-ops", environment = "qc" }]
+  sync_period = "30s"
+}
+loki.source.file "ops" {
+  targets = local.file_match.ops.targets
+  forward_to = [loki.process.safe.receiver]
+}
+loki.process "safe" {
+  forward_to = [loki.write.cloud.receiver]
+  stage.json {
+    expressions = { schema = "schema", event = "event" }
+  }
+  stage.labels {
+    values = { event = "", schema = "" }
+  }
+  stage.match {
+    selector = "{schema!=\"replisense.ops.v1\"}"
+    action = "drop"
+  }
+  stage.match {
+    selector = "{event!~\"http.failed|worker.started|worker.failed|worker.maintenance_failed|qc.attempt_failed|qc.completed|qc.export_completed|qc.export_failed|llm.completed|llm.failed\"}"
+    action = "drop"
+  }
+  stage.template {
+    source = "safe_line"
+    template = "{\"schema\":\"replisense.ops.v1\",\"event\":\"{{ .event }}\"}"
+  }
+  stage.output {
+    source = "safe_line"
+  }
+  stage.label_drop {
+    values = ["schema"]
+  }
+}
+loki.write "cloud" {
+  endpoint {
+    url = "https://logs-prod-028.grafana.net/loki/api/v1/push"
+    basic_auth {
+      username = "1817287"
+      password_file = "/run/credentials/grafana-token"
+    }
+  }
+}

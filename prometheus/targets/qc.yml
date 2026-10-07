@@ -1,0 +1,4 @@
+- targets: ["https://qc.replicantsys.com/"]
+  labels: {environment: qc, service: frontend, module: http_2xx}
+- targets: ["https://qc.replicantsys.com/api/auth/refresh"]
+  labels: {environment: qc, service: api-edge, module: api_unauthenticated}

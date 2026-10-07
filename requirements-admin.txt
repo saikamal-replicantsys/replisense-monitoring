@@ -1,0 +1,2 @@
+# Optional local administration scripts; the collector uses the host AWS CLI.
+boto3>=1.40,<2
