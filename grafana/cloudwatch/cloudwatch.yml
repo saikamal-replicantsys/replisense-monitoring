@@ -1,0 +1,11 @@
+apiVersion: 1
+datasources:
+  - name: AWS QC CloudWatch
+    uid: cloudwatch-qc
+    type: cloudwatch
+    access: proxy
+    editable: false
+    jsonData:
+      authType: credentials
+      profile: monitoring
+      defaultRegion: ap-south-1

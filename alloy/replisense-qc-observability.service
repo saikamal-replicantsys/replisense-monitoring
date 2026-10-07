@@ -1,0 +1,18 @@
+[Unit]
+Description=RepliSense QC private telemetry collector
+Requires=docker.service
+After=docker.service network-online.target qc-application.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/replisense-qc-observability
+ExecStartPre=/usr/bin/python3 /opt/replisense-qc-observability/credentials.py
+ExecStart=/usr/bin/docker compose -f compose.yaml up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -f compose.yaml stop
+TimeoutStartSec=180
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

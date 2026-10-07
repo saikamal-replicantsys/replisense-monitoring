@@ -1,0 +1,779 @@
+[
+  {
+    "uid": "replisense-qc-collector",
+    "title": "QC required services / collector unavailable",
+    "folderUID": "replisense-qc",
+    "ruleGroup": "qc-operations",
+    "orgID": 1,
+    "condition": "C",
+    "for": "3m",
+    "noDataState": "Alerting",
+    "execErrState": "Alerting",
+    "isPaused": false,
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "grafanacloud-prom",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "sum(up{environment=\"qc\",job=~\"replisense-(node-api|qc-worker|python-gateway)\"}) or vector(0)",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "editorMode": "code",
+          "intervalMs": 60000,
+          "maxDataPoints": 43200
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "B",
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "settings": {
+            "mode": "dropNN"
+          },
+          "conditions": []
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "C",
+          "type": "threshold",
+          "expression": "B",
+          "conditions": [
+            {
+              "type": "query",
+              "evaluator": {
+                "type": "lt",
+                "params": [
+                  3
+                ]
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "type": "last",
+                "params": []
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "labels": {
+      "environment": "qc",
+      "application": "replisense",
+      "observability": "replisense-qc",
+      "severity": "critical"
+    },
+    "annotations": {
+      "summary": "QC required services / collector unavailable",
+      "description": "Missing/private service metrics or loss of the QC collector. Check EC2/SSM and container health.",
+      "runbook_url": "https://neatparlor1816.grafana.net/d/replisense-qc-operations"
+    }
+  },
+  {
+    "uid": "replisense-qc-edge",
+    "title": "QC public HTTPS endpoint unavailable",
+    "folderUID": "replisense-qc",
+    "ruleGroup": "qc-operations",
+    "orgID": 1,
+    "condition": "C",
+    "for": "2m",
+    "noDataState": "Alerting",
+    "execErrState": "Alerting",
+    "isPaused": false,
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "grafanacloud-prom",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "min(probe_success{environment=\"qc\",service=~\"frontend|api-edge\"}) or vector(0)",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "editorMode": "code",
+          "intervalMs": 60000,
+          "maxDataPoints": 43200
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "B",
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "settings": {
+            "mode": "dropNN"
+          },
+          "conditions": []
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "C",
+          "type": "threshold",
+          "expression": "B",
+          "conditions": [
+            {
+              "type": "query",
+              "evaluator": {
+                "type": "lt",
+                "params": [
+                  1
+                ]
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "type": "last",
+                "params": []
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "labels": {
+      "environment": "qc",
+      "application": "replisense",
+      "observability": "replisense-qc",
+      "severity": "critical"
+    },
+    "annotations": {
+      "summary": "QC public HTTPS endpoint unavailable",
+      "description": "Frontend or unauthenticated API HTTPS probe failed. The API probe expects HTTP 401.",
+      "runbook_url": "https://neatparlor1816.grafana.net/d/replisense-qc-operations"
+    }
+  },
+  {
+    "uid": "replisense-qc-dependencies",
+    "title": "QC dependency readiness failed",
+    "folderUID": "replisense-qc",
+    "ruleGroup": "qc-operations",
+    "orgID": 1,
+    "condition": "C",
+    "for": "2m",
+    "noDataState": "Alerting",
+    "execErrState": "Alerting",
+    "isPaused": false,
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "grafanacloud-prom",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "min(probe_success{environment=\"qc\",service=~\"node-dependencies|document-engine|redis\"}) or vector(0)",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "editorMode": "code",
+          "intervalMs": 60000,
+          "maxDataPoints": 43200
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "B",
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "settings": {
+            "mode": "dropNN"
+          },
+          "conditions": []
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "C",
+          "type": "threshold",
+          "expression": "B",
+          "conditions": [
+            {
+              "type": "query",
+              "evaluator": {
+                "type": "lt",
+                "params": [
+                  1
+                ]
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "type": "last",
+                "params": []
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "labels": {
+      "environment": "qc",
+      "application": "replisense",
+      "observability": "replisense-qc",
+      "severity": "critical"
+    },
+    "annotations": {
+      "summary": "QC dependency readiness failed",
+      "description": "Check Node MongoDB/Redis readiness, Redis TCP and document-engine HTTP health.",
+      "runbook_url": "https://neatparlor1816.grafana.net/d/replisense-qc-operations"
+    }
+  },
+  {
+    "uid": "replisense-qc-heartbeat",
+    "title": "QC worker heartbeat stale",
+    "folderUID": "replisense-qc",
+    "ruleGroup": "qc-operations",
+    "orgID": 1,
+    "condition": "C",
+    "for": "2m",
+    "noDataState": "Alerting",
+    "execErrState": "Alerting",
+    "isPaused": false,
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "grafanacloud-prom",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "max(time() - replisense_worker_heartbeat_timestamp_seconds{environment=\"qc\",worker=\"qc-worker\"}) or vector(999999)",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "editorMode": "code",
+          "intervalMs": 60000,
+          "maxDataPoints": 43200
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "B",
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "settings": {
+            "mode": "dropNN"
+          },
+          "conditions": []
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "C",
+          "type": "threshold",
+          "expression": "B",
+          "conditions": [
+            {
+              "type": "query",
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  120
+                ]
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "type": "last",
+                "params": []
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "labels": {
+      "environment": "qc",
+      "application": "replisense",
+      "observability": "replisense-qc",
+      "severity": "critical"
+    },
+    "annotations": {
+      "summary": "QC worker heartbeat stale",
+      "description": "The worker heartbeat is missing or older than two minutes. This is process liveness, not proof a job is making progress.",
+      "runbook_url": "https://neatparlor1816.grafana.net/d/replisense-qc-operations"
+    }
+  },
+  {
+    "uid": "replisense-qc-http-errors",
+    "title": "QC API server errors",
+    "folderUID": "replisense-qc",
+    "ruleGroup": "qc-operations",
+    "orgID": 1,
+    "condition": "C",
+    "for": "1m",
+    "noDataState": "OK",
+    "execErrState": "Alerting",
+    "isPaused": false,
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "grafanacloud-prom",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "sum(increase(replisense_http_requests_total{environment=\"qc\",status_code=~\"5..\"}[10m])) or vector(0)",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "editorMode": "code",
+          "intervalMs": 60000,
+          "maxDataPoints": 43200
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "B",
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "settings": {
+            "mode": "dropNN"
+          },
+          "conditions": []
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "C",
+          "type": "threshold",
+          "expression": "B",
+          "conditions": [
+            {
+              "type": "query",
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  2
+                ]
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "type": "last",
+                "params": []
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "labels": {
+      "environment": "qc",
+      "application": "replisense",
+      "observability": "replisense-qc",
+      "severity": "warning"
+    },
+    "annotations": {
+      "summary": "QC API server errors",
+      "description": "At least three HTTP 5xx responses in ten minutes. Check sanitized operational events and private AWS logs.",
+      "runbook_url": "https://neatparlor1816.grafana.net/d/replisense-qc-operations"
+    }
+  },
+  {
+    "uid": "replisense-qc-operational",
+    "title": "QC processing / export / provider error",
+    "folderUID": "replisense-qc",
+    "ruleGroup": "qc-operations",
+    "orgID": 1,
+    "condition": "C",
+    "for": "0s",
+    "noDataState": "OK",
+    "execErrState": "Alerting",
+    "isPaused": false,
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "grafanacloud-logs",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "sum(count_over_time({environment=\"qc\",job=\"replisense-ops\",event=~\"qc.attempt_failed|qc.export_failed|worker.failed|worker.maintenance_failed|llm.failed\"}[10m]))",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "editorMode": "code",
+          "intervalMs": 60000,
+          "maxDataPoints": 43200
+        },
+        "queryType": "instant"
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "B",
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "settings": {
+            "mode": "dropNN"
+          },
+          "conditions": []
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "C",
+          "type": "threshold",
+          "expression": "B",
+          "conditions": [
+            {
+              "type": "query",
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  0
+                ]
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "type": "last",
+                "params": []
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "labels": {
+      "environment": "qc",
+      "application": "replisense",
+      "observability": "replisense-qc",
+      "severity": "warning"
+    },
+    "annotations": {
+      "summary": "QC processing / export / provider error",
+      "description": "An allowlisted operational failure occurred. A retry can subsequently succeed; this alert does not mean every finding is an incident.",
+      "runbook_url": "https://neatparlor1816.grafana.net/d/replisense-qc-operations"
+    }
+  },
+  {
+    "uid": "replisense-qc-gemini-access",
+    "title": "QC Gemini billing / authentication failed",
+    "folderUID": "replisense-qc",
+    "ruleGroup": "qc-operations",
+    "orgID": 1,
+    "condition": "C",
+    "for": "0s",
+    "noDataState": "OK",
+    "execErrState": "Alerting",
+    "isPaused": false,
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "grafanacloud-prom",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "sum(increase(replisense_llm_requests_total{environment=\"qc\",outcome=~\"payment_required|authentication\"}[10m])) or vector(0)",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "editorMode": "code",
+          "intervalMs": 60000,
+          "maxDataPoints": 43200
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "B",
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "settings": {
+            "mode": "dropNN"
+          },
+          "conditions": []
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "C",
+          "type": "threshold",
+          "expression": "B",
+          "conditions": [
+            {
+              "type": "query",
+              "evaluator": {
+                "type": "gt",
+                "params": [
+                  0
+                ]
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "type": "last",
+                "params": []
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "labels": {
+      "environment": "qc",
+      "application": "replisense",
+      "observability": "replisense-qc",
+      "severity": "critical"
+    },
+    "annotations": {
+      "summary": "QC Gemini billing / authentication failed",
+      "description": "Gemini reported depleted credits or invalid authentication. Verify provider billing and the QC SecureString without exposing its value.",
+      "runbook_url": "https://neatparlor1816.grafana.net/d/replisense-qc-operations"
+    }
+  },
+  {
+    "uid": "replisense-qc-tls",
+    "title": "QC HTTPS certificate expires soon",
+    "folderUID": "replisense-qc",
+    "ruleGroup": "qc-operations",
+    "orgID": 1,
+    "condition": "C",
+    "for": "10m",
+    "noDataState": "OK",
+    "execErrState": "Alerting",
+    "isPaused": false,
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "grafanacloud-prom",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "refId": "A",
+          "expr": "min(probe_ssl_earliest_cert_expiry{environment=\"qc\",service=~\"frontend|api-edge\"}) - time()",
+          "instant": true,
+          "range": false,
+          "queryType": "instant",
+          "editorMode": "code",
+          "intervalMs": 60000,
+          "maxDataPoints": 43200
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "B",
+          "type": "reduce",
+          "expression": "A",
+          "reducer": "last",
+          "settings": {
+            "mode": "dropNN"
+          },
+          "conditions": []
+        }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "model": {
+          "refId": "C",
+          "type": "threshold",
+          "expression": "B",
+          "conditions": [
+            {
+              "type": "query",
+              "evaluator": {
+                "type": "lt",
+                "params": [
+                  1209600
+                ]
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "type": "last",
+                "params": []
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "labels": {
+      "environment": "qc",
+      "application": "replisense",
+      "observability": "replisense-qc",
+      "severity": "warning"
+    },
+    "annotations": {
+      "summary": "QC HTTPS certificate expires soon",
+      "description": "Public HTTPS certificate has less than fourteen days remaining. Check ACM DNS validation and origin renewal automation.",
+      "runbook_url": "https://neatparlor1816.grafana.net/d/replisense-qc-operations"
+    }
+  }
+]

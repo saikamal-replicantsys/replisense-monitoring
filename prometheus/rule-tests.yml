@@ -1,0 +1,29 @@
+rule_files: [rules/platform-alerts.yml]
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'probe_success{job="blackbox-http",environment="qc",service="frontend",instance="https://qc.replicantsys.com/"}'
+        values: '0 0 0 0'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: PublicEndpointUnavailable
+        exp_alerts:
+          - exp_labels: {environment: qc, service: frontend, instance: "https://qc.replicantsys.com/", job: blackbox-http, severity: critical}
+            exp_annotations:
+              summary: "Endpoint probe failed: frontend (qc)"
+              description: "HTTPS/status check failed for https://qc.replicantsys.com/."
+  - interval: 1m
+    input_series:
+      - series: 'probe_success{job="blackbox-http",environment="qc",service="api-edge"}'
+        values: '1 1 1 1'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: PublicEndpointUnavailable
+        exp_alerts: []
+  - interval: 1m
+    input_series: []
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: WorkerHeartbeatStale
+        exp_alerts: []

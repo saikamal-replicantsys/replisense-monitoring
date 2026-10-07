@@ -1,0 +1,755 @@
+{
+  "apiVersion": "dashboard.grafana.app/v1beta1",
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "replisense-qc-operations",
+    "namespace": "stacks-1859509",
+    "annotations": {
+      "grafana.app/folder": "replisense-qc"
+    }
+  },
+  "spec": {
+    "uid": "replisense-qc-operations",
+    "title": "RepliSense QC Operations",
+    "schemaVersion": 41,
+    "version": 1,
+    "editable": false,
+    "tags": [
+      "qc",
+      "RS-1124",
+      "observability"
+    ],
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timezone": "browser",
+    "templating": {
+      "list": [
+        {
+          "name": "environment",
+          "label": "Environment",
+          "type": "query",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "query": "label_values(up, environment)",
+          "refresh": 1,
+          "multi": true,
+          "includeAll": true,
+          "allValue": ".*",
+          "current": {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          }
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Public endpoint availability",
+        "type": "stat",
+        "description": "1 = expected HTTPS/status response; 0 = failed. API probe expects 401 without authentication, not a full workflow test.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "probe_success{environment=~\"$environment\",job=\"blackbox-http\"}",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {
+                    "text": "Unavailable",
+                    "color": "red",
+                    "index": 0
+                  },
+                  "1": {
+                    "text": "Available",
+                    "color": "green",
+                    "index": 1
+                  }
+                }
+              }
+            ]
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Metrics scrape availability",
+        "type": "stat",
+        "description": "Missing series means not configured, NOT healthy. QC internal metrics need an outbound collector or private tunnel.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "up{environment=~\"$environment\",job=~\"replisense-.*\"}",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {
+                    "text": "Unavailable",
+                    "color": "red",
+                    "index": 0
+                  },
+                  "1": {
+                    "text": "Available",
+                    "color": "green",
+                    "index": 1
+                  }
+                }
+              }
+            ]
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "HTTP requests / second",
+        "type": "timeseries",
+        "description": "",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 8,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (environment,service) (rate(replisense_http_requests_total{environment=~\"$environment\"}[5m]))",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "HTTP 5xx / ten minutes",
+        "type": "timeseries",
+        "description": "",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 12,
+          "y": 8,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (environment,service) (increase(replisense_http_requests_total{environment=~\"$environment\",status_code=~\"5..\"}[10m]))",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "HTTP latency p95",
+        "type": "timeseries",
+        "description": "Includes document uploads/processing; not an interactive API-only SLO.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 16,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "histogram_quantile(0.95, sum by (le,environment,service) (rate(replisense_http_request_duration_seconds_bucket{environment=~\"$environment\"}[5m])))",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "TLS expiry (days)",
+        "type": "stat",
+        "description": "",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 12,
+          "y": 16,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "(probe_ssl_earliest_cert_expiry{environment=~\"$environment\",job=\"blackbox-http\"} - time()) / 86400",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "d"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "QC lifecycle events / hour",
+        "type": "timeseries",
+        "description": "Lifecycle event counter, not current MongoDB job totals or quota usage; counters reset at restart.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 24,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (environment,status) (increase(replisense_qc_runs_total{environment=~\"$environment\"}[1h]))",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "QC worker failures / hour",
+        "type": "timeseries",
+        "description": "Failed engine attempts; retries may later succeed. Private worker endpoint required.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 12,
+          "y": 24,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (environment,worker) (increase(replisense_worker_jobs_failed_total{environment=~\"$environment\",worker=\"qc-worker\"}[1h]))",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "QC duration p95",
+        "type": "timeseries",
+        "description": "Requires worker-process metrics; never infer duration from API-only metrics.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 32,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "histogram_quantile(0.95, sum by (le,environment,worker) (rate(replisense_worker_job_duration_seconds_bucket{environment=~\"$environment\",worker=\"qc-worker\"}[1h])))",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "QC findings / hour",
+        "type": "timeseries",
+        "description": "Requires worker metrics. Findings are not application incidents.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 12,
+          "y": 32,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (environment,severity) (increase(replisense_qc_issues_found_total{environment=~\"$environment\"}[1h]))",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 11,
+        "title": "Worker heartbeat age",
+        "type": "timeseries",
+        "description": "Unavailable until worker metrics exposure is implemented; missing data is not a healthy heartbeat.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 40,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "time() - replisense_worker_heartbeat_timestamp_seconds{environment=~\"$environment\"}",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "Active monitoring alerts",
+        "type": "alertlist",
+        "description": "",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 12,
+          "y": 40,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "options": {
+          "viewMode": "list",
+          "maxItems": 10,
+          "alertName": "QC",
+          "stateFilter": {
+            "firing": true,
+            "pending": true
+          },
+          "showOptions": "current"
+        }
+      },
+      {
+        "id": 13,
+        "title": "Gemini invocations / hour",
+        "type": "timeseries",
+        "description": "Application provider calls, including repeated calls. SDK-internal retries are not counted separately.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 48,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (model,outcome) (increase(replisense_llm_requests_total{environment=~\"$environment\"}[1h]))",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 14,
+        "title": "Gemini reported tokens / hour",
+        "type": "timeseries",
+        "description": "Total includes provider-reported thinking usage. Not a billing estimate; activity by other apps sharing the key is not visible here.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 12,
+          "y": 48,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (kind) (increase(replisense_llm_tokens_total{environment=~\"$environment\"}[1h]))",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 15,
+        "title": "Reviewed DOCX exports / hour",
+        "type": "timeseries",
+        "description": "One event per claimed export attempt; repeated reads of an already-ready export do not increment.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 56,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (outcome) (increase(replisense_qc_exports_total{environment=~\"$environment\"}[1h]))",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 16,
+        "title": "Dependency availability",
+        "type": "stat",
+        "description": "Node readiness checks MongoDB connection and Redis readiness; Redis TCP and document-engine HTTP health are also probed.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 12,
+          "y": 56,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "probe_success{environment=~\"$environment\",service=~\"node-dependencies|document-engine|redis\"}",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 17,
+        "title": "Host CPU utilization",
+        "type": "timeseries",
+        "description": "Aggregate QC host CPU; no Docker socket or privileged exporter is used.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 64,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{environment=~\"$environment\",mode=\"idle\"}[5m])))",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 18,
+        "title": "Host memory utilization",
+        "type": "timeseries",
+        "description": "",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 12,
+          "y": 64,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "100 * (1 - node_memory_MemAvailable_bytes{environment=~\"$environment\"} / node_memory_MemTotal_bytes{environment=~\"$environment\"})",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 19,
+        "title": "Sanitized operational events",
+        "type": "logs",
+        "description": "Only allowlisted event names, never document text, filenames, client identities, prompts or credentials.",
+        "datasource": {
+          "type": "loki",
+          "uid": "grafanacloud-logs"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 72,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "{environment=~\"$environment\",job=\"replisense-ops\"}",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}",
+            "datasource": {
+              "type": "loki",
+              "uid": "grafanacloud-logs"
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      }
+    ]
+  }
+}

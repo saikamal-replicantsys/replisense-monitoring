@@ -26,3 +26,12 @@ yarn-debug.log*
 yarn-error.log*
 
 service-account-key.json
+
+debug.log
+
+secrets/*
+!secrets/.gitkeep
+*.local.yml
+__pycache__/
+snapshots/
+artifacts/

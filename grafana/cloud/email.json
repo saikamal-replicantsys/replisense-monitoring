@@ -1,0 +1,7 @@
+{
+  "uid": "replisense-qc-email",
+  "name": "RepliSense QC email",
+  "type": "email",
+  "disableResolveMessage": false,
+  "settings": {"addresses": "saikamal@replicantsys.com", "singleEmail": true}
+}
