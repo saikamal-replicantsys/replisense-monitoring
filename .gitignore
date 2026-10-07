@@ -35,3 +35,5 @@ secrets/*
 __pycache__/
 snapshots/
 artifacts/
+.venv/
+*.pyc

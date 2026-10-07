@@ -26,6 +26,11 @@ route metrics/readiness through CloudFront/Nginx. Collector ports are not publis
 
 ## Credentials
 
+Administration helpers require Python and boto3. Install in a local virtual
+environment with `python -m pip install -r requirements-admin.txt`; use that
+environment's interpreter for the commands below. Collector credential loading
+on EC2 uses the already-installed AWS CLI, not personal AWS keys.
+
 Use a stack-scoped access policy `replisense-qc-telemetry` with ONLY `metrics:write`
 and `logs:write`. Store its token directly as SecureString in `ap-south-1`:
 `/replisense/qc/GRAFANA_CLOUD_TOKEN`. Interactive `gcx` OAuth is for administration,
