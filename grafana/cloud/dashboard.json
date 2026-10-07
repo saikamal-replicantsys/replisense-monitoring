@@ -35,15 +35,15 @@
             "type": "prometheus",
             "uid": "grafanacloud-prom"
           },
-          "query": "label_values(up, environment)",
+          "query": "label_values(up{environment=\"qc\"}, environment)",
           "refresh": 1,
           "multi": true,
           "includeAll": true,
           "allValue": ".*",
           "current": {
             "selected": true,
-            "text": "All",
-            "value": "$__all"
+            "text": "qc",
+            "value": "qc"
           }
         }
       ]
@@ -74,6 +74,7 @@
         "fieldConfig": {
           "defaults": {
             "unit": "short",
+            "noValue": "Awaiting data",
             "mappings": [
               {
                 "type": "value",
@@ -98,6 +99,15 @@
           "legend": {
             "displayMode": "list",
             "placement": "bottom"
+          },
+          "graphMode": "none",
+          "colorMode": "value",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
           }
         }
       },
@@ -120,12 +130,13 @@
           {
             "refId": "A",
             "expr": "up{environment=~\"$environment\",job=~\"replisense-.*\"}",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+            "legendFormat": "{{job}}"
           }
         ],
         "fieldConfig": {
           "defaults": {
             "unit": "short",
+            "noValue": "Awaiting data",
             "mappings": [
               {
                 "type": "value",
@@ -150,6 +161,15 @@
           "legend": {
             "displayMode": "list",
             "placement": "bottom"
+          },
+          "graphMode": "none",
+          "colorMode": "value",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
           }
         }
       },
@@ -177,7 +197,8 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "reqps"
+            "unit": "reqps",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -212,7 +233,8 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "short"
+            "unit": "short",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -247,7 +269,8 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "s"
+            "unit": "s",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -282,7 +305,29 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "d"
+            "unit": "suffix: days",
+            "noValue": "Awaiting data",
+            "decimals": 0,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 14
+                },
+                {
+                  "color": "green",
+                  "value": 30
+                }
+              ]
+            }
           },
           "overrides": []
         },
@@ -290,6 +335,15 @@
           "legend": {
             "displayMode": "list",
             "placement": "bottom"
+          },
+          "graphMode": "none",
+          "colorMode": "value",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
           }
         }
       },
@@ -317,7 +371,8 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "short"
+            "unit": "short",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -352,7 +407,8 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "short"
+            "unit": "short",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -387,7 +443,8 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "s"
+            "unit": "s",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -422,7 +479,8 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "short"
+            "unit": "short",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -457,7 +515,8 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "s"
+            "unit": "s",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -486,7 +545,8 @@
         "targets": [],
         "fieldConfig": {
           "defaults": {
-            "unit": "short"
+            "unit": "short",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -520,12 +580,13 @@
           {
             "refId": "A",
             "expr": "sum by (model,outcome) (increase(replisense_llm_requests_total{environment=~\"$environment\"}[1h]))",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+            "legendFormat": "{{outcome}}"
           }
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "short"
+            "unit": "short",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -555,12 +616,13 @@
           {
             "refId": "A",
             "expr": "sum by (kind) (increase(replisense_llm_tokens_total{environment=~\"$environment\"}[1h]))",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+            "legendFormat": "{{kind}}"
           }
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "short"
+            "unit": "short",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -590,12 +652,13 @@
           {
             "refId": "A",
             "expr": "sum by (outcome) (increase(replisense_qc_exports_total{environment=~\"$environment\"}[1h]))",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+            "legendFormat": "{{outcome}}"
           }
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "short"
+            "unit": "short",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -630,7 +693,25 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "short"
+            "unit": "short",
+            "noValue": "Awaiting data",
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {
+                    "text": "Unavailable",
+                    "color": "red",
+                    "index": 0
+                  },
+                  "1": {
+                    "text": "Available",
+                    "color": "green",
+                    "index": 1
+                  }
+                }
+              }
+            ]
           },
           "overrides": []
         },
@@ -638,6 +719,15 @@
           "legend": {
             "displayMode": "list",
             "placement": "bottom"
+          },
+          "graphMode": "none",
+          "colorMode": "value",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
           }
         }
       },
@@ -665,7 +755,8 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "percent"
+            "unit": "percent",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -700,7 +791,8 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "percent"
+            "unit": "percent",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },
@@ -739,7 +831,8 @@
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "short"
+            "unit": "short",
+            "noValue": "Awaiting data"
           },
           "overrides": []
         },

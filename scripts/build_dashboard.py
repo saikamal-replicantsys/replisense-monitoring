@@ -17,16 +17,17 @@ def dashboard(cloud=False):
             "description": description, "datasource": datasource,
             "gridPos": {"x": (index % 2) * 12, "y": (index // 2) * 8, "w": 12, "h": 8},
             "targets": [{"refId": "A", "expr": expr, "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"}],
-            "fieldConfig": {"defaults": {"unit": unit}, "overrides": []},
+            "fieldConfig": {"defaults": {"unit": unit, "noValue": "Awaiting data"}, "overrides": []},
             "options": {"legend": {"displayMode": "list", "placement": "bottom"}},
         })
-        if title in ("Public endpoint availability", "Metrics scrape availability"):
+        if title in ("Public endpoint availability", "Metrics scrape availability", "Dependency availability"):
             panels[-1]["fieldConfig"]["defaults"]["mappings"] = [{
                 "type": "value", "options": {
                     "0": {"text": "Unavailable", "color": "red", "index": 0},
                     "1": {"text": "Available", "color": "green", "index": 1},
                 },
             }]
+            panels[-1]["options"].update(graphMode="none", colorMode="value", reduceOptions={"calcs": ["lastNotNull"], "fields": "", "values": False})
 
     env = 'environment=~"$environment"'
     panel("Public endpoint availability", f'probe_success{{{env},job="blackbox-http"}}', "short", "stat",
@@ -38,6 +39,9 @@ def dashboard(cloud=False):
     panel("HTTP latency p95", f'histogram_quantile(0.95, sum by (le,environment,service) (rate(replisense_http_request_duration_seconds_bucket{{{env}}}[5m])))', "s",
           description="Includes document uploads/processing; not an interactive API-only SLO.")
     panel("TLS expiry (days)", f'(probe_ssl_earliest_cert_expiry{{{env},job="blackbox-http"}} - time()) / 86400', "d", "stat")
+    panels[-1]["fieldConfig"]["defaults"].update(unit="suffix: days", decimals=0, color={"mode": "thresholds"},
+        thresholds={"mode": "absolute", "steps": [{"color": "red", "value": None}, {"color": "orange", "value": 14}, {"color": "green", "value": 30}]})
+    panels[-1]["options"].update(graphMode="none", colorMode="value", reduceOptions={"calcs": ["lastNotNull"], "fields": "", "values": False})
     panel("QC lifecycle events / hour", f'sum by (environment,status) (increase(replisense_qc_runs_total{{{env}}}[1h]))',
           description="Lifecycle event counter, not current MongoDB job totals or quota usage; counters reset at restart.")
     panel("QC worker failures / hour", f'sum by (environment,worker) (increase(replisense_worker_jobs_failed_total{{{env},worker="qc-worker"}}[1h]))',
@@ -67,6 +71,15 @@ def dashboard(cloud=False):
               description="Only allowlisted event names, never document text, filenames, client identities, prompts or credentials.")
         panels[-1]["datasource"] = {"type": "loki", "uid": "grafanacloud-logs"}
         panels[-1]["targets"][0]["datasource"] = panels[-1]["datasource"]
+        for item in panels:
+            if item["title"] == "Metrics scrape availability":
+                item["targets"][0]["legendFormat"] = "{{job}}"
+            if item["title"] == "Gemini invocations / hour":
+                item["targets"][0]["legendFormat"] = "{{outcome}}"
+            if item["title"] == "Gemini reported tokens / hour":
+                item["targets"][0]["legendFormat"] = "{{kind}}"
+            if item["title"] == "Reviewed DOCX exports / hour":
+                item["targets"][0]["legendFormat"] = "{{outcome}}"
     return {
         "uid": "replisense-qc-operations", "title": "RepliSense QC Operations",
         "schemaVersion": 41, "version": 1, "editable": False,
@@ -74,9 +87,9 @@ def dashboard(cloud=False):
         "time": {"from": "now-6h", "to": "now"}, "timezone": "browser",
         "templating": {"list": [{
             "name": "environment", "label": "Environment", "type": "query",
-            "datasource": datasource, "query": "label_values(up, environment)",
+            "datasource": datasource, "query": 'label_values(up{environment="qc"}, environment)' if cloud else "label_values(up, environment)",
             "refresh": 1, "multi": True, "includeAll": True, "allValue": ".*",
-            "current": {"selected": True, "text": "All", "value": "$__all"},
+            "current": {"selected": True, "text": "qc" if cloud else "All", "value": "qc" if cloud else "$__all"},
         }]}, "panels": panels,
     }
 

@@ -38,6 +38,21 @@ class ConfigurationTests(unittest.TestCase):
         self.assertNotIn("ports:", compose)
         self.assertNotIn("docker.sock", compose)
         self.assertIn("/proc/meminfo:/host/proc/meminfo:ro", compose)
+        self.assertIn('user: "0:0"', compose)
+        self.assertIn('cap_drop: [ALL]', compose)
+        self.assertIn('no-new-privileges:true', compose)
+
+    def test_public_probes_use_routable_ipv4(self):
+        config = (ROOT / "alloy/blackbox.yml").read_text()
+        self.assertEqual(config.count("preferred_ip_protocol: ip4"), 2)
+
+    def test_cloud_dashboard_certificate_health(self):
+        dashboard = load("build_dashboard").dashboard(cloud=True)
+        self.assertEqual(dashboard["templating"]["list"][0]["current"]["value"], "qc")
+        panel = next(item for item in dashboard["panels"] if item["title"] == "TLS expiry (days)")
+        defaults = panel["fieldConfig"]["defaults"]
+        self.assertEqual(defaults["unit"], "suffix: days")
+        self.assertEqual(defaults["thresholds"]["steps"][-1], {"color": "green", "value": 30})
 
     def test_external_logs_are_reconstructed_not_forwarded_raw(self):
         config = (ROOT / "alloy/config.alloy").read_text()

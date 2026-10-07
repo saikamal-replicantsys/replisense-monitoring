@@ -47,6 +47,16 @@ shutil.copy2(root/'replisense-qc-observability.service','/etc/systemd/system/rep
 shutil.copy2(root/'logrotate.conf','/etc/logrotate.d/replisense-qc-ops')
 subprocess.run(['python3',str(root/'credentials.py')],check=True)
 subprocess.run(['docker','compose','-f',str(root/'compose.yaml'),'pull'],check=True)
+# The image seeds this named volume as alloy:alloy; the hardened collector uses
+# root for 0600 credentials but has no DAC override capability. Initialize only
+# its own volume ownership, using an offline helper without host/secret mounts.
+image='grafana/alloy:v1.20.1@sha256:2aa2099af76c0098d4af7a4d6e48f86cb66dc1a000222ad927a1c67c6542d13f'
+volume='replisense-qc-observability_alloy-data'
+subprocess.run(['docker','volume','create',volume],check=True,stdout=subprocess.DEVNULL)
+subprocess.run(['docker','run','--rm','--network','none','--user','0:0',
+ '--cap-drop','ALL','--cap-add','CHOWN','--cap-add','DAC_OVERRIDE',
+ '--security-opt','no-new-privileges:true','--mount','type=volume,source='+volume+',target=/var/lib/alloy',
+ '--entrypoint','/bin/sh',image,'-c','chown -R 0:0 /var/lib/alloy'],check=True)
 subprocess.run(['docker','compose','-f',str(root/'compose.yaml'),'run','--rm','--no-deps','alloy','validate','/etc/alloy/config.alloy'],check=True)
 subprocess.run(['systemctl','daemon-reload'],check=True)
 subprocess.run(['systemctl','enable','replisense-qc-observability'],check=True)

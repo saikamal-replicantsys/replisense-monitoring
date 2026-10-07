@@ -64,6 +64,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "noValue": "Awaiting data",
           "mappings": [
             {
               "type": "value",
@@ -88,6 +89,15 @@
         "legend": {
           "displayMode": "list",
           "placement": "bottom"
+        },
+        "graphMode": "none",
+        "colorMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         }
       }
     },
@@ -116,6 +126,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "noValue": "Awaiting data",
           "mappings": [
             {
               "type": "value",
@@ -140,6 +151,15 @@
         "legend": {
           "displayMode": "list",
           "placement": "bottom"
+        },
+        "graphMode": "none",
+        "colorMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         }
       }
     },
@@ -167,7 +187,8 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps"
+          "unit": "reqps",
+          "noValue": "Awaiting data"
         },
         "overrides": []
       },
@@ -202,7 +223,8 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "noValue": "Awaiting data"
         },
         "overrides": []
       },
@@ -237,7 +259,8 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "noValue": "Awaiting data"
         },
         "overrides": []
       },
@@ -272,7 +295,29 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "d"
+          "unit": "suffix: days",
+          "noValue": "Awaiting data",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 14
+              },
+              {
+                "color": "green",
+                "value": 30
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -280,6 +325,15 @@
         "legend": {
           "displayMode": "list",
           "placement": "bottom"
+        },
+        "graphMode": "none",
+        "colorMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         }
       }
     },
@@ -307,7 +361,8 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "noValue": "Awaiting data"
         },
         "overrides": []
       },
@@ -342,7 +397,8 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "noValue": "Awaiting data"
         },
         "overrides": []
       },
@@ -377,7 +433,8 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "noValue": "Awaiting data"
         },
         "overrides": []
       },
@@ -412,7 +469,8 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "noValue": "Awaiting data"
         },
         "overrides": []
       },
@@ -447,7 +505,8 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "noValue": "Awaiting data"
         },
         "overrides": []
       },
@@ -482,7 +541,8 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "noValue": "Awaiting data"
         },
         "overrides": []
       },

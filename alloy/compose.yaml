@@ -2,6 +2,8 @@ name: replisense-qc-observability
 services:
   alloy:
     image: grafana/alloy:v1.20.1@sha256:2aa2099af76c0098d4af7a4d6e48f86cb66dc1a000222ad927a1c67c6542d13f
+    # Read root-only credentials/events; retain no capabilities or host write mounts.
+    user: "0:0"
     command: ["run", "--server.http.listen-addr=127.0.0.1:12345", "--storage.path=/var/lib/alloy", "--disable-reporting", "/etc/alloy/config.alloy"]
     restart: unless-stopped
     mem_limit: 384m

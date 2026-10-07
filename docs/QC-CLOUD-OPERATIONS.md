@@ -88,6 +88,12 @@ Reinstall from this repository after EC2 replacement. It is deliberately separat
 from demo Terraform. Record the SSM command ID and poll the original command;
 a waiter timeout is not proof of failure and must not trigger a duplicate deploy.
 
+The collector explicitly runs as UID 0 to read root-only credential/event files,
+but drops ALL capabilities, enables no-new-privileges and has no writable host
+mounts. Installation initializes only its own named data-volume ownership with
+an offline short-lived helper (CHOWN/DAC_OVERRIDE, no credentials or host mounts).
+Public probes prefer IPv4 because the QC VPC/container network has no IPv6 route.
+
 The original memory collector dropped its only InstanceId-only metric while
 aggregation used the same dimensions. `repair_qc_host_metrics.py --execute`
 removes that drop setting, backs up/reloads the existing agent configuration and
