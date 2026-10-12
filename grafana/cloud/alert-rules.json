@@ -584,7 +584,7 @@
   },
   {
     "uid": "replisense-qc-gemini-access",
-    "title": "QC Gemini billing / authentication failed",
+    "title": "QC AI provider billing / authentication failed",
     "folderUID": "replisense-qc",
     "ruleGroup": "qc-operations",
     "orgID": 1,
@@ -674,8 +674,8 @@
       "severity": "critical"
     },
     "annotations": {
-      "summary": "QC Gemini billing / authentication failed",
-      "description": "Gemini reported depleted credits or invalid authentication. Verify provider billing and the QC SecureString without exposing its value.",
+      "summary": "QC AI provider billing / authentication failed",
+      "description": "The AI provider reported depleted credits or invalid authentication. Verify the active provider's billing/access and QC configuration without exposing credentials.",
       "runbook_url": "https://neatparlor1816.grafana.net/d/replisense-qc-operations"
     }
   },
