@@ -1,6 +1,9 @@
 # RepliSense monitoring
 
-Work for RS-1124 (dashboards) and RS-1141 (alerting evaluation). Local checkout is
+Work for RS-1124 / RS-1141 (initial monitoring) and RS-1142 / RS-1143 (QC email
+recipients and manager-first dashboards). The latest rollout and Rahul's pending
+free-plan onboarding are documented in [RS-1142 / RS-1143](docs/RS-1142-RS-1143.md).
+Local checkout is
 `replisense-monitoring`; its current Git remote is
 `saikamal-replicantsys/replisense-monitoring`, not `Replicant-Systems/replicant-monitoring`.
 Confirm repository ownership before pushing. Existing unrelated working-tree
@@ -45,9 +48,11 @@ Targets are in `prometheus/targets`. Add production public targets only after
 `app.replicantsys.com` is deployed; do not alert on an intentionally offline demo.
 Local services being down is normal when developers are not running them.
 Local alerts are suppressed by the generated email configuration.
-Missing metrics are **not** healthy/zero values. Worker counters live in separate
-processes without scrape endpoints today. See METRIC_CONTRACT.md and
-INSTRUMENTATION_GUIDE.md for the actual contract and remaining application work.
+Missing metrics are **not** healthy/zero values. Worker counters live in a
+separate process. QC's private collector now scrapes its authenticated Docker-only
+endpoint; the default local stack does not automatically reach that endpoint.
+See METRIC_CONTRACT.md and INSTRUMENTATION_GUIDE.md for the metric contract,
+and QC-CLOUD-OPERATIONS.md for the deployed collector.
 
 ## Can a local dashboard read production/QC?
 

@@ -111,8 +111,14 @@ gcx resources push -p grafana/cloud/folder.json
 gcx alert contact-points create -f grafana/cloud/email.json
 ```
 
-Create the contact point once; inspect before update. Recipient
-`saikamal@replicantsys.com`. AWS SNS is separately confirmed and remains an
+Create the contact point once; inspect before update. Current recipients are
+`saikamal@replicantsys.com` and `siddharth@replicantsys.com`. Rahul is pending
+the next-month free-plan access decision; do not invite him or enable a paid
+plan automatically. This stack rejects email recipients who are not members.
+Sai, Siddharth and tech have already signed in this month; removing tech from
+notifications does not reduce that month's active-user count. See
+[RS-1142 / RS-1143 rollout](RS-1142-RS-1143.md).
+AWS SNS is separately confirmed and remains an
 independent fallback. After actual metric/log arrival, validate/push
 `grafana/cloud/dashboard.json`, snapshot and inspect its PNG visually.
 
@@ -123,7 +129,7 @@ python scripts/configure_cloud_alerts.py --execute
 ```
 
 Eight QC-owned rules: missing collector/services, public HTTPS, dependencies,
-heartbeat, HTTP 5xx, operational failures, Gemini billing/authentication, TLS
+heartbeat, HTTP 5xx, operational failures, AI provider billing/authentication, TLS
 expiry. No-data means an outage for availability, but no error events is normal.
 Previous rules/policy are backed up under ignored `artifacts/`. Other-team/default
 routes remain unchanged; only the QC-labelled email route is added. Group wait

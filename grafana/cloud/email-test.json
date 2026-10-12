@@ -4,7 +4,7 @@
     "type": "email",
     "version": "v1",
     "disableResolveMessage": false,
-    "settings": {"addresses": "saikamal@replicantsys.com", "singleEmail": true}
+    "settings": {"addresses": "saikamal@replicantsys.com;siddharth@replicantsys.com", "singleEmail": true}
   },
   "alert": {
     "labels": {"alertname": "QC observability notification test", "environment": "qc", "severity": "info"},

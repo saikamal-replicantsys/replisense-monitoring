@@ -4,17 +4,21 @@
   "schemaVersion": 41,
   "version": 1,
   "editable": false,
+  "description": "Live health at the top; activity uses the selected period. Counts are telemetry estimates, not quotas or database totals. Missing data is never treated as healthy.",
   "tags": [
     "qc",
-    "RS-1124",
+    "RS-1143",
     "observability"
   ],
-  "refresh": "30s",
+  "refresh": "1m",
   "time": {
     "from": "now-6h",
     "to": "now"
   },
   "timezone": "browser",
+  "annotations": {
+    "list": []
+  },
   "templating": {
     "list": [
       {
@@ -40,58 +44,93 @@
   },
   "panels": [
     {
-      "id": 1,
-      "title": "Public endpoint availability",
+      "id": 13,
+      "title": "At a glance \u2014 live health and activity in the selected period",
+      "type": "row",
+      "collapsed": false,
+      "panels": [],
+      "targets": [],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 14,
+      "title": "Customer access",
       "type": "stat",
-      "description": "1 = expected HTTPS/status response; 0 = failed. API probe expects 401 without authentication, not a full workflow test.",
+      "description": "Live website HTTPS and API reachability; both checks must report and pass. API expects 401 without login. This is not an end-to-end evaluation test.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "gridPos": {
-        "x": 0,
-        "y": 0,
-        "w": 12,
-        "h": 8
-      },
       "targets": [
         {
           "refId": "A",
-          "expr": "probe_success{environment=~\"$environment\",job=\"blackbox-http\"}",
-          "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          "expr": "min by(environment) (probe_success{environment=~\"$environment\",service=~\"frontend|api-edge\"}) * on(environment) (count by(environment) (probe_success{environment=~\"$environment\",service=~\"frontend|api-edge\"}) == bool 2) * on(environment) (max by(environment) (time() - timestamp(probe_success{environment=~\"$environment\",service=~\"frontend|api-edge\"})) < bool 180)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{environment}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "Awaiting data",
+          "decimals": 0,
+          "noValue": "Not reporting",
+          "color": {
+            "mode": "thresholds"
+          },
           "mappings": [
             {
               "type": "value",
               "options": {
                 "0": {
-                  "text": "Unavailable",
+                  "text": "Needs attention",
                   "color": "red",
                   "index": 0
                 },
                 "1": {
-                  "text": "Available",
+                  "text": "Healthy",
                   "color": "green",
                   "index": 1
                 }
               }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not reporting",
+                  "color": "gray"
+                }
+              }
             }
-          ]
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
         },
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
         "graphMode": "none",
         "colorMode": "value",
+        "orientation": "horizontal",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -99,51 +138,478 @@
           "fields": "",
           "values": false
         }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 8,
+        "h": 5
       }
     },
     {
-      "id": 2,
-      "title": "Metrics scrape availability",
+      "id": 15,
+      "title": "QC processing health",
       "type": "stat",
-      "description": "Missing series means not configured, NOT healthy. QC internal metrics need an outbound collector or private tunnel.",
+      "description": "Live API, worker, Python, database/cache and document-engine readiness plus a heartbeat younger than two minutes. Healthy means reachable, not guaranteed job success.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min by(environment) (up{environment=~\"$environment\",job=~\"replisense-(node-api|qc-worker|python-gateway)\"}) * on(environment) (count by(environment) (up{environment=~\"$environment\",job=~\"replisense-(node-api|qc-worker|python-gateway)\"}) == bool 3) * on(environment) min by(environment) (probe_success{environment=~\"$environment\",service=~\"node-dependencies|document-engine|redis\"}) * on(environment) (count by(environment) (probe_success{environment=~\"$environment\",service=~\"node-dependencies|document-engine|redis\"}) == bool 3) * on(environment) (max by(environment) (time() - replisense_worker_heartbeat_timestamp_seconds{environment=~\"$environment\",worker=\"qc-worker\"}) < bool 120)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Not reporting",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Needs attention",
+                  "color": "red",
+                  "index": 0
+                },
+                "1": {
+                  "text": "Healthy",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not reporting",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 8,
+        "h": 5
+      }
+    },
+    {
+      "id": 16,
+      "title": "Monitoring coverage",
+      "type": "stat",
+      "description": "All four expected private metric targets must report successfully within three minutes. Missing telemetry is Not reporting, never Healthy. Health is current, not historical uptime.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min by(environment) (up{environment=~\"$environment\",job=~\"replisense-(node-api|qc-worker|python-gateway|host)\"}) * on(environment) (count by(environment) (up{environment=~\"$environment\",job=~\"replisense-(node-api|qc-worker|python-gateway|host)\"}) == bool 4) * on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=~\"replisense-(node-api|qc-worker|python-gateway|host)\"})) < bool 180)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Not reporting",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Needs attention",
+                  "color": "red",
+                  "index": 0
+                },
+                "1": {
+                  "text": "Healthy",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not reporting",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 8,
+        "h": 5
+      }
+    },
+    {
+      "id": 17,
+      "title": "Reviews completed",
+      "type": "stat",
+      "description": "Estimated sampled counter increase in the selected period; not database totals, unique documents or contract quota. Collection gaps/restarts can undercount.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum by(environment) (increase(replisense_qc_runs_total{environment=~\"$environment\",status=\"completed\"}[$__range]))) or on(environment) ((0 * (min by(environment) (up{environment=~\"$environment\",job=\"replisense-qc-worker\"}) == 1)) and on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=\"replisense-qc-worker\"})) < 180))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "No telemetry",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "id": 18,
+      "title": "Reviewed DOCX generated",
+      "type": "stat",
+      "description": "Estimated sampled counter increase in the selected period; not database totals, unique documents or contract quota. Collection gaps/restarts can undercount. Generated exports are not downloads.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum by(environment) (increase(replisense_qc_exports_total{environment=~\"$environment\",outcome=\"completed\"}[$__range]))) or on(environment) ((0 * (min by(environment) (up{environment=~\"$environment\",job=\"replisense-qc-worker\"}) == 1)) and on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=\"replisense-qc-worker\"})) < 180))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "No telemetry",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 6,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "id": 19,
+      "title": "Processing attempts failed",
+      "type": "stat",
+      "description": "Estimated sampled counter increase in the selected period; not database totals, unique documents or contract quota. Collection gaps/restarts can undercount. Retries can succeed later; not a count of permanently failed documents.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum by(environment) (increase(replisense_worker_jobs_failed_total{environment=~\"$environment\",worker=\"qc-worker\"}[$__range]))) or on(environment) ((0 * (min by(environment) (up{environment=~\"$environment\",job=\"replisense-qc-worker\"}) == 1)) and on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=\"replisense-qc-worker\"})) < 180))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "No telemetry",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "id": 20,
+      "title": "API server errors",
+      "type": "stat",
+      "description": "HTTP 5xx responses in the selected period. Zero only while fresh API metrics report; missing telemetry stays unknown.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum by(environment) (increase(replisense_http_requests_total{environment=~\"$environment\",service=\"node-api\",status_code=~\"5..\"}[$__range]))) or on(environment) ((0 * (min by(environment) (up{environment=~\"$environment\",job=\"replisense-node-api\"}) == 1)) and on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=\"replisense-node-api\"})) < 180))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "No telemetry",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 6,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "id": 12,
+      "title": "Needs attention \u2014 current alerts",
+      "type": "stat",
+      "description": "Current firing, pending, recovery and evaluation-error alerts. An empty list means no matching alerts, not proof of end-to-end health. Document findings are not monitoring incidents.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ALERTS{environment=~\"$environment\",alertstate=\"firing\",severity!=\"heartbeat\"}",
+          "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Awaiting data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Review activity \u00b7 rolling hour",
+      "type": "timeseries",
+      "description": "Lifecycle event counter, not current MongoDB job totals or quota usage; counters reset at restart.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 10,
         "w": 12,
-        "h": 8
+        "h": 6
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "up{environment=~\"$environment\",job=~\"replisense-.*\"}",
-          "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          "expr": "sum by (environment,status) (increase(replisense_qc_runs_total{environment=~\"$environment\"}[1h]))",
+          "legendFormat": "{{status}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "Awaiting data",
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "Unavailable",
-                  "color": "red",
-                  "index": 0
-                },
-                "1": {
-                  "text": "Available",
-                  "color": "green",
-                  "index": 1
-                }
-              }
-            }
-          ]
+          "noValue": "Awaiting data"
         },
         "overrides": []
       },
@@ -151,38 +617,214 @@
         "legend": {
           "displayMode": "list",
           "placement": "bottom"
-        },
-        "graphMode": "none",
-        "colorMode": "value",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
         }
       }
     },
     {
-      "id": 3,
-      "title": "HTTP requests / second",
+      "id": 9,
+      "title": "Review processing time \u00b7 95th percentile",
       "type": "timeseries",
-      "description": "",
+      "description": "95% of measured worker attempts finish within this time. Includes failed attempts; excludes queue waiting and DOCX generation. No jobs means no measurement, not zero seconds.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "x": 0,
-        "y": 8,
-        "w": 12,
-        "h": 8
+        "y": 16,
+        "w": 8,
+        "h": 6
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (environment,service) (rate(replisense_http_requests_total{environment=~\"$environment\"}[5m]))",
+          "expr": "(histogram_quantile(0.95, sum by (le,environment,worker) (rate(replisense_worker_job_duration_seconds_bucket{environment=~\"$environment\",worker=\"qc-worker\"}[1h])))) and on(environment,worker) (sum by(environment,worker) (increase(replisense_worker_job_duration_seconds_count{environment=~\"$environment\",worker=\"qc-worker\"}[1h])) > 0)",
+          "legendFormat": "QC worker"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "No measured reviews"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Findings identified \u00b7 rolling hour",
+      "type": "timeseries",
+      "description": "Requires worker metrics. Findings are not application incidents.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 16,
+        "w": 8,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (environment,severity) (increase(replisense_qc_issues_found_total{environment=~\"$environment\"}[1h]))",
+          "legendFormat": "{{severity}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "No review activity"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "critical"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Critical"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "major"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Major"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "minor"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Minor"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Failed processing attempts \u00b7 rolling hour",
+      "type": "timeseries",
+      "description": "Failed engine attempts; retries may later succeed. Private worker endpoint required.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 16,
+        "w": 8,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum by(environment) (increase(replisense_worker_jobs_failed_total{environment=~\"$environment\",worker=\"qc-worker\"}[1h]))) or on(environment) ((0 * (min by(environment) (up{environment=~\"$environment\",job=\"replisense-qc-worker\"}) == 1)) and on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=\"replisense-qc-worker\"})) < 180))",
           "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "No telemetry",
+          "min": 0,
+          "decimals": 0,
+          "custom": {
+            "axisSoftMax": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Performance \u2014 traffic and responsiveness",
+      "type": "row",
+      "collapsed": false,
+      "panels": [],
+      "targets": [],
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 3,
+      "title": "Application requests",
+      "type": "timeseries",
+      "description": "Requests per second, excluding health/readiness checks. Includes API polling, not a count of users or documents.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 8,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (environment,service) (rate(replisense_http_requests_total{environment=~\"$environment\",route!=\"/health\",route!=\"/ready\"}[5m]))",
+          "legendFormat": "{{service}}"
         }
       ],
       "fieldConfig": {
@@ -200,44 +842,8 @@
       }
     },
     {
-      "id": 4,
-      "title": "HTTP 5xx / ten minutes",
-      "type": "timeseries",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 8,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (environment,service) (increase(replisense_http_requests_total{environment=~\"$environment\",status_code=~\"5..\"}[10m]))",
-          "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "Awaiting data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
       "id": 5,
-      "title": "HTTP latency p95",
+      "title": "Response time \u00b7 95th percentile",
       "type": "timeseries",
       "description": "Includes document uploads/processing; not an interactive API-only SLO.",
       "datasource": {
@@ -245,22 +851,22 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "x": 0,
-        "y": 16,
-        "w": 12,
-        "h": 8
+        "x": 8,
+        "y": 23,
+        "w": 8,
+        "h": 6
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le,environment,service) (rate(replisense_http_request_duration_seconds_bucket{environment=~\"$environment\"}[5m])))",
-          "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          "expr": "(histogram_quantile(0.95, sum by (le,environment,service) (rate(replisense_http_request_duration_seconds_bucket{environment=~\"$environment\",route!=\"/health\",route!=\"/ready\"}[5m])))) and on(environment,service) (sum by(environment,service) (increase(replisense_http_request_duration_seconds_count{environment=~\"$environment\",route!=\"/health\",route!=\"/ready\"}[5m])) > 0)",
+          "legendFormat": "{{service}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "noValue": "Awaiting data"
+          "noValue": "No measured requests"
         },
         "overrides": []
       },
@@ -272,25 +878,218 @@
       }
     },
     {
-      "id": 6,
-      "title": "TLS expiry (days)",
-      "type": "stat",
+      "id": 4,
+      "title": "Server errors \u00b7 last 10 minutes",
+      "type": "timeseries",
       "description": "",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
-        "x": 12,
-        "y": 16,
+        "x": 16,
+        "y": 23,
+        "w": 8,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum by(environment) (increase(replisense_http_requests_total{environment=~\"$environment\",status_code=~\"5..\"}[10m]))) or on(environment) ((0 * (min by(environment) (up{environment=~\"$environment\",job=\"replisense-node-api\"}) == 1)) and on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=\"replisense-node-api\"})) < 180))",
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "No telemetry",
+          "min": 0,
+          "decimals": 0,
+          "custom": {
+            "axisSoftMax": 3
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "title": "Technical details \u2014 dependencies, capacity and certificates",
+      "type": "row",
+      "collapsed": false,
+      "panels": [],
+      "targets": [],
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 1,
+      "title": "Individual service checks",
+      "type": "stat",
+      "description": "1 = expected HTTPS/status response; 0 = failed. API probe expects 401 without authentication, not a full workflow test.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 30,
         "w": 12,
-        "h": 8
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "probe_success{environment=~\"$environment\",job=\"blackbox-http\"}",
+          "legendFormat": "{{service}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Awaiting data",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Unavailable",
+                  "color": "red",
+                  "index": 0
+                },
+                "1": {
+                  "text": "Available",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "graphMode": "none",
+        "colorMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {
+          "valueSize": 22,
+          "titleSize": 13
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Metrics collection",
+      "type": "stat",
+      "description": "Missing series means not configured, NOT healthy. QC internal metrics need an outbound collector or private tunnel.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 30,
+        "w": 12,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{environment=~\"$environment\",job=~\"replisense-.*\"}",
+          "legendFormat": "{{job}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Awaiting data",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Unavailable",
+                  "color": "red",
+                  "index": 0
+                },
+                "1": {
+                  "text": "Available",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "graphMode": "none",
+        "colorMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {
+          "valueSize": 22,
+          "titleSize": 13
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "TLS expiry (days)",
+      "type": "stat",
+      "description": "Public website/API certificate days remaining. Warning below 30 days, critical below 14. This is not the private origin certificate.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 8,
+        "h": 5
       },
       "targets": [
         {
           "refId": "A",
           "expr": "(probe_ssl_earliest_cert_expiry{environment=~\"$environment\",job=\"blackbox-http\"} - time()) / 86400",
-          "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          "legendFormat": "{{service}}",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -334,150 +1133,10 @@
           ],
           "fields": "",
           "values": false
-        }
-      }
-    },
-    {
-      "id": 7,
-      "title": "QC lifecycle events / hour",
-      "type": "timeseries",
-      "description": "Lifecycle event counter, not current MongoDB job totals or quota usage; counters reset at restart.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 24,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (environment,status) (increase(replisense_qc_runs_total{environment=~\"$environment\"}[1h]))",
-          "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "Awaiting data"
         },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 8,
-      "title": "QC worker failures / hour",
-      "type": "timeseries",
-      "description": "Failed engine attempts; retries may later succeed. Private worker endpoint required.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 24,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (environment,worker) (increase(replisense_worker_jobs_failed_total{environment=~\"$environment\",worker=\"qc-worker\"}[1h]))",
-          "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "Awaiting data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 9,
-      "title": "QC duration p95",
-      "type": "timeseries",
-      "description": "Requires worker-process metrics; never infer duration from API-only metrics.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 32,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le,environment,worker) (rate(replisense_worker_job_duration_seconds_bucket{environment=~\"$environment\",worker=\"qc-worker\"}[1h])))",
-          "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "noValue": "Awaiting data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 10,
-      "title": "QC findings / hour",
-      "type": "timeseries",
-      "description": "Requires worker metrics. Findings are not application incidents.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 32,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (environment,severity) (increase(replisense_qc_issues_found_total{environment=~\"$environment\"}[1h]))",
-          "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "Awaiting data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+        "text": {
+          "valueSize": 28,
+          "titleSize": 13
         }
       }
     },
@@ -491,57 +1150,21 @@
         "uid": "prometheus"
       },
       "gridPos": {
-        "x": 0,
-        "y": 40,
-        "w": 12,
-        "h": 8
+        "x": 8,
+        "y": 34,
+        "w": 8,
+        "h": 5
       },
       "targets": [
         {
           "refId": "A",
           "expr": "time() - replisense_worker_heartbeat_timestamp_seconds{environment=~\"$environment\"}",
-          "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          "legendFormat": "QC worker"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "noValue": "Awaiting data"
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 12,
-      "title": "Active monitoring alerts",
-      "type": "stat",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 40,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "ALERTS{environment=~\"$environment\",alertstate=\"firing\",severity!=\"heartbeat\"}",
-          "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
           "noValue": "Awaiting data"
         },
         "overrides": []

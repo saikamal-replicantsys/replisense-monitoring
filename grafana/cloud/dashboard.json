@@ -14,17 +14,41 @@
     "schemaVersion": 41,
     "version": 1,
     "editable": false,
+    "description": "Live health at the top; activity uses the selected period. Counts are telemetry estimates, not quotas or database totals. Missing data is never treated as healthy.",
     "tags": [
       "qc",
-      "RS-1124",
+      "RS-1143",
       "observability"
     ],
-    "refresh": "30s",
+    "refresh": "1m",
     "time": {
       "from": "now-6h",
       "to": "now"
     },
     "timezone": "browser",
+    "annotations": {
+      "list": [
+        {
+          "name": "QC deployments",
+          "enable": true,
+          "hide": false,
+          "iconColor": "#73BF69",
+          "datasource": {
+            "type": "grafana",
+            "uid": "-- Grafana --"
+          },
+          "target": {
+            "type": "tags",
+            "tags": [
+              "replisense",
+              "qc",
+              "deployment"
+            ],
+            "matchAny": false
+          }
+        }
+      ]
+    },
     "templating": {
       "list": [
         {
@@ -50,58 +74,93 @@
     },
     "panels": [
       {
-        "id": 1,
-        "title": "Public endpoint availability",
+        "id": 20,
+        "title": "At a glance \u2014 live health and activity in the selected period",
+        "type": "row",
+        "collapsed": false,
+        "panels": [],
+        "targets": [],
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 24,
+          "h": 1
+        }
+      },
+      {
+        "id": 21,
+        "title": "Customer access",
         "type": "stat",
-        "description": "1 = expected HTTPS/status response; 0 = failed. API probe expects 401 without authentication, not a full workflow test.",
+        "description": "Live website HTTPS and API reachability; both checks must report and pass. API expects 401 without login. This is not an end-to-end evaluation test.",
         "datasource": {
           "type": "prometheus",
           "uid": "grafanacloud-prom"
         },
-        "gridPos": {
-          "x": 0,
-          "y": 0,
-          "w": 12,
-          "h": 8
-        },
         "targets": [
           {
             "refId": "A",
-            "expr": "probe_success{environment=~\"$environment\",job=\"blackbox-http\"}",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+            "expr": "min by(environment) (probe_success{environment=~\"$environment\",service=~\"frontend|api-edge\"}) * on(environment) (count by(environment) (probe_success{environment=~\"$environment\",service=~\"frontend|api-edge\"}) == bool 2) * on(environment) (max by(environment) (time() - timestamp(probe_success{environment=~\"$environment\",service=~\"frontend|api-edge\"})) < bool 180)",
+            "instant": true,
+            "range": false,
+            "legendFormat": "{{environment}}"
           }
         ],
         "fieldConfig": {
           "defaults": {
             "unit": "short",
-            "noValue": "Awaiting data",
+            "decimals": 0,
+            "noValue": "Not reporting",
+            "color": {
+              "mode": "thresholds"
+            },
             "mappings": [
               {
                 "type": "value",
                 "options": {
                   "0": {
-                    "text": "Unavailable",
+                    "text": "Needs attention",
                     "color": "red",
                     "index": 0
                   },
                   "1": {
-                    "text": "Available",
+                    "text": "Healthy",
                     "color": "green",
                     "index": 1
                   }
                 }
+              },
+              {
+                "type": "special",
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "Not reporting",
+                    "color": "gray"
+                  }
+                }
               }
-            ]
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            }
           },
           "overrides": []
         },
         "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
-          },
           "graphMode": "none",
           "colorMode": "value",
+          "orientation": "horizontal",
+          "textMode": "auto",
           "reduceOptions": {
             "calcs": [
               "lastNotNull"
@@ -109,51 +168,834 @@
             "fields": "",
             "values": false
           }
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 1,
+          "w": 8,
+          "h": 5
         }
       },
       {
-        "id": 2,
-        "title": "Metrics scrape availability",
+        "id": 22,
+        "title": "QC processing health",
         "type": "stat",
-        "description": "Missing series means not configured, NOT healthy. QC internal metrics need an outbound collector or private tunnel.",
+        "description": "Live API, worker, Python, database/cache and document-engine readiness plus a heartbeat younger than two minutes. Healthy means reachable, not guaranteed job success.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "min by(environment) (up{environment=~\"$environment\",job=~\"replisense-(node-api|qc-worker|python-gateway)\"}) * on(environment) (count by(environment) (up{environment=~\"$environment\",job=~\"replisense-(node-api|qc-worker|python-gateway)\"}) == bool 3) * on(environment) min by(environment) (probe_success{environment=~\"$environment\",service=~\"node-dependencies|document-engine|redis\"}) * on(environment) (count by(environment) (probe_success{environment=~\"$environment\",service=~\"node-dependencies|document-engine|redis\"}) == bool 3) * on(environment) (max by(environment) (time() - replisense_worker_heartbeat_timestamp_seconds{environment=~\"$environment\",worker=\"qc-worker\"}) < bool 120)",
+            "instant": true,
+            "range": false,
+            "legendFormat": "{{environment}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0,
+            "noValue": "Not reporting",
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {
+                    "text": "Needs attention",
+                    "color": "red",
+                    "index": 0
+                  },
+                  "1": {
+                    "text": "Healthy",
+                    "color": "green",
+                    "index": 1
+                  }
+                }
+              },
+              {
+                "type": "special",
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "Not reporting",
+                    "color": "gray"
+                  }
+                }
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value",
+          "orientation": "horizontal",
+          "textMode": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          }
+        },
+        "gridPos": {
+          "x": 8,
+          "y": 1,
+          "w": 8,
+          "h": 5
+        }
+      },
+      {
+        "id": 23,
+        "title": "Monitoring coverage",
+        "type": "stat",
+        "description": "All four expected private metric targets must report successfully within three minutes. Missing telemetry is Not reporting, never Healthy. Health is current, not historical uptime.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "min by(environment) (up{environment=~\"$environment\",job=~\"replisense-(node-api|qc-worker|python-gateway|host)\"}) * on(environment) (count by(environment) (up{environment=~\"$environment\",job=~\"replisense-(node-api|qc-worker|python-gateway|host)\"}) == bool 4) * on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=~\"replisense-(node-api|qc-worker|python-gateway|host)\"})) < bool 180)",
+            "instant": true,
+            "range": false,
+            "legendFormat": "{{environment}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0,
+            "noValue": "Not reporting",
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {
+                    "text": "Needs attention",
+                    "color": "red",
+                    "index": 0
+                  },
+                  "1": {
+                    "text": "Healthy",
+                    "color": "green",
+                    "index": 1
+                  }
+                }
+              },
+              {
+                "type": "special",
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "Not reporting",
+                    "color": "gray"
+                  }
+                }
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value",
+          "orientation": "horizontal",
+          "textMode": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          }
+        },
+        "gridPos": {
+          "x": 16,
+          "y": 1,
+          "w": 4,
+          "h": 5
+        }
+      },
+      {
+        "id": 24,
+        "title": "Reviews completed",
+        "type": "stat",
+        "description": "Estimated sampled counter increase in the selected period; not database totals, unique documents or contract quota. Collection gaps/restarts can undercount.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "(sum by(environment) (increase(replisense_qc_runs_total{environment=~\"$environment\",status=\"completed\"}[$__range]))) or on(environment) ((0 * (min by(environment) (up{environment=~\"$environment\",job=\"replisense-qc-worker\"}) == 1)) and on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=\"replisense-qc-worker\"})) < 180))",
+            "instant": true,
+            "range": false,
+            "legendFormat": "{{environment}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0,
+            "noValue": "No telemetry",
+            "color": {
+              "mode": "fixed",
+              "fixedColor": "blue"
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value",
+          "orientation": "horizontal",
+          "textMode": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          }
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 6,
+          "w": 6,
+          "h": 4
+        }
+      },
+      {
+        "id": 25,
+        "title": "Reviewed DOCX generated",
+        "type": "stat",
+        "description": "Estimated sampled counter increase in the selected period; not database totals, unique documents or contract quota. Collection gaps/restarts can undercount. Generated exports are not downloads.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "(sum by(environment) (increase(replisense_qc_exports_total{environment=~\"$environment\",outcome=\"completed\"}[$__range]))) or on(environment) ((0 * (min by(environment) (up{environment=~\"$environment\",job=\"replisense-qc-worker\"}) == 1)) and on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=\"replisense-qc-worker\"})) < 180))",
+            "instant": true,
+            "range": false,
+            "legendFormat": "{{environment}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0,
+            "noValue": "No telemetry",
+            "color": {
+              "mode": "fixed",
+              "fixedColor": "blue"
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value",
+          "orientation": "horizontal",
+          "textMode": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          }
+        },
+        "gridPos": {
+          "x": 6,
+          "y": 6,
+          "w": 6,
+          "h": 4
+        }
+      },
+      {
+        "id": 26,
+        "title": "Processing attempts failed",
+        "type": "stat",
+        "description": "Estimated sampled counter increase in the selected period; not database totals, unique documents or contract quota. Collection gaps/restarts can undercount. Retries can succeed later; not a count of permanently failed documents.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "(sum by(environment) (increase(replisense_worker_jobs_failed_total{environment=~\"$environment\",worker=\"qc-worker\"}[$__range]))) or on(environment) ((0 * (min by(environment) (up{environment=~\"$environment\",job=\"replisense-qc-worker\"}) == 1)) and on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=\"replisense-qc-worker\"})) < 180))",
+            "instant": true,
+            "range": false,
+            "legendFormat": "{{environment}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0,
+            "noValue": "No telemetry",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value",
+          "orientation": "horizontal",
+          "textMode": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          }
+        },
+        "gridPos": {
+          "x": 12,
+          "y": 6,
+          "w": 6,
+          "h": 4
+        },
+        "links": [
+          {
+            "title": "QC alert rules and details",
+            "url": "https://neatparlor1816.grafana.net/alerting/list",
+            "targetBlank": true
+          },
+          {
+            "title": "QC operations runbook",
+            "url": "https://github.com/saikamal-replicantsys/replisense-monitoring/blob/main/docs/QC-CLOUD-OPERATIONS.md",
+            "targetBlank": true
+          }
+        ]
+      },
+      {
+        "id": 27,
+        "title": "API server errors",
+        "type": "stat",
+        "description": "HTTP 5xx responses in the selected period. Zero only while fresh API metrics report; missing telemetry stays unknown.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "(sum by(environment) (increase(replisense_http_requests_total{environment=~\"$environment\",service=\"node-api\",status_code=~\"5..\"}[$__range]))) or on(environment) ((0 * (min by(environment) (up{environment=~\"$environment\",job=\"replisense-node-api\"}) == 1)) and on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=\"replisense-node-api\"})) < 180))",
+            "instant": true,
+            "range": false,
+            "legendFormat": "{{environment}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0,
+            "noValue": "No telemetry",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value",
+          "orientation": "horizontal",
+          "textMode": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          }
+        },
+        "gridPos": {
+          "x": 18,
+          "y": 6,
+          "w": 6,
+          "h": 4
+        },
+        "links": [
+          {
+            "title": "QC alert rules and details",
+            "url": "https://neatparlor1816.grafana.net/alerting/list",
+            "targetBlank": true
+          },
+          {
+            "title": "QC operations runbook",
+            "url": "https://github.com/saikamal-replicantsys/replisense-monitoring/blob/main/docs/QC-CLOUD-OPERATIONS.md",
+            "targetBlank": true
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Needs attention \u2014 current alerts",
+        "type": "alertlist",
+        "description": "Current firing, pending, recovery and evaluation-error alerts. An empty list means no matching alerts, not proof of end-to-end health. Document findings are not monitoring incidents.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 10,
+          "w": 12,
+          "h": 6
+        },
+        "targets": [],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "noValue": "Awaiting data"
+          },
+          "overrides": []
+        },
+        "options": {
+          "viewMode": "list",
+          "maxItems": 8,
+          "sortOrder": 3,
+          "dashboardAlerts": false,
+          "folder": {
+            "uid": "replisense-qc",
+            "title": "RepliSense QC"
+          },
+          "groupMode": "default",
+          "alertInstanceLabelFilter": "{environment=~\"$environment\",observability=\"replisense-qc\",setup_test!=\"true\"}",
+          "showInstances": true,
+          "showInactiveAlerts": false,
+          "stateFilter": {
+            "firing": true,
+            "pending": true,
+            "recovering": true,
+            "error": true,
+            "noData": true,
+            "normal": false
+          }
+        },
+        "links": [
+          {
+            "title": "QC alert rules and details",
+            "url": "https://neatparlor1816.grafana.net/alerting/list",
+            "targetBlank": true
+          },
+          {
+            "title": "QC operations runbook",
+            "url": "https://github.com/saikamal-replicantsys/replisense-monitoring/blob/main/docs/QC-CLOUD-OPERATIONS.md",
+            "targetBlank": true
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Availability history",
+        "type": "state-timeline",
+        "description": "Historical checks, not request traces or guaranteed QC success. Green = passing, red = failing, gaps = no observation. Never connect gaps into a healthy interval.",
         "datasource": {
           "type": "prometheus",
           "uid": "grafanacloud-prom"
         },
         "gridPos": {
           "x": 12,
-          "y": 0,
+          "y": 10,
           "w": 12,
-          "h": 8
+          "h": 6
         },
         "targets": [
           {
             "refId": "A",
-            "expr": "up{environment=~\"$environment\",job=~\"replisense-.*\"}",
-            "legendFormat": "{{job}}"
+            "expr": "probe_success{environment=~\"$environment\",service=~\"frontend|api-edge|document-engine|node-dependencies\"}",
+            "legendFormat": "{{service}}",
+            "range": true
+          },
+          {
+            "refId": "B",
+            "expr": "up{environment=~\"$environment\",service=~\"qc-worker|python-gateway\"}",
+            "legendFormat": "{{service}}",
+            "range": true
           }
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "short",
-            "noValue": "Awaiting data",
+            "noValue": "Unknown",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            },
             "mappings": [
               {
                 "type": "value",
                 "options": {
                   "0": {
                     "text": "Unavailable",
-                    "color": "red",
-                    "index": 0
+                    "color": "red"
                   },
                   "1": {
                     "text": "Available",
-                    "color": "green",
-                    "index": 1
+                    "color": "green"
                   }
                 }
               }
-            ]
+            ],
+            "custom": {
+              "spanNulls": false
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "frontend"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Website"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "api-edge"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "API access"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "qc-worker"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "QC worker"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "python-gateway"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Python"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "document-engine"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "DOCX engine"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "node-dependencies"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "DB / cache"
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "mergeValues": true,
+          "showValue": "never",
+          "alignValue": "center",
+          "rowHeight": 0.8,
+          "legend": {
+            "showLegend": false
+          },
+          "tooltip": {
+            "mode": "single"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Review speed distribution",
+        "type": "heatmap",
+        "description": "Measured worker attempts by duration bucket and time; excludes queue waiting/export. Five-minute sampled histogram increases are estimates, not exact document counts. Empty intervals mean no measured attempts. Durations over one hour are outside the finite buckets.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 16,
+          "w": 8,
+          "h": 6
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by(le) (increase(replisense_worker_job_duration_seconds_bucket{environment=~\"$environment\",worker=\"qc-worker\",le!=\"+Inf\"}[5m]))",
+            "format": "heatmap",
+            "legendFormat": "{{le}}",
+            "range": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "options": {
+          "calculate": false,
+          "cellGap": 1,
+          "color": {
+            "mode": "scheme",
+            "scheme": "Blues",
+            "scale": "linear",
+            "steps": 64
+          },
+          "yAxis": {
+            "axisLabel": "Worker duration",
+            "unit": "s",
+            "decimals": 0
+          },
+          "legend": {
+            "show": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "showColorScale": true
+          },
+          "filterValues": {
+            "le": 0
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Findings identified \u00b7 rolling hour",
+        "type": "timeseries",
+        "description": "Requires worker metrics. Findings are not application incidents.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 8,
+          "y": 16,
+          "w": 8,
+          "h": 6
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (environment,severity) (increase(replisense_qc_issues_found_total{environment=~\"$environment\"}[1h]))",
+            "legendFormat": "{{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "noValue": "No review activity"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "critical"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Critical"
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "red"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "major"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Major"
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "orange"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "minor"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "Minor"
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "blue"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Failed processing attempts \u00b7 rolling hour",
+        "type": "timeseries",
+        "description": "Failed engine attempts; retries may later succeed. Private worker endpoint required.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 16,
+          "y": 16,
+          "w": 8,
+          "h": 6
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "(sum by(environment) (increase(replisense_worker_jobs_failed_total{environment=~\"$environment\",worker=\"qc-worker\"}[1h]))) or on(environment) ((0 * (min by(environment) (up{environment=~\"$environment\",job=\"replisense-qc-worker\"}) == 1)) and on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=\"replisense-qc-worker\"})) < 180))",
+            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "noValue": "No telemetry",
+            "min": 0,
+            "decimals": 0,
+            "custom": {
+              "axisSoftMax": 3
+            }
           },
           "overrides": []
         },
@@ -161,38 +1003,43 @@
           "legend": {
             "displayMode": "list",
             "placement": "bottom"
-          },
-          "graphMode": "none",
-          "colorMode": "value",
-          "reduceOptions": {
-            "calcs": [
-              "lastNotNull"
-            ],
-            "fields": "",
-            "values": false
           }
         }
       },
       {
+        "id": 28,
+        "title": "Performance \u2014 traffic and responsiveness",
+        "type": "row",
+        "collapsed": false,
+        "panels": [],
+        "targets": [],
+        "gridPos": {
+          "x": 0,
+          "y": 22,
+          "w": 24,
+          "h": 1
+        }
+      },
+      {
         "id": 3,
-        "title": "HTTP requests / second",
+        "title": "Application requests",
         "type": "timeseries",
-        "description": "",
+        "description": "Requests per second, excluding health/readiness checks. Includes API polling, not a count of users or documents.",
         "datasource": {
           "type": "prometheus",
           "uid": "grafanacloud-prom"
         },
         "gridPos": {
           "x": 0,
-          "y": 8,
-          "w": 12,
-          "h": 8
+          "y": 23,
+          "w": 8,
+          "h": 6
         },
         "targets": [
           {
             "refId": "A",
-            "expr": "sum by (environment,service) (rate(replisense_http_requests_total{environment=~\"$environment\"}[5m]))",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+            "expr": "sum by (environment,service) (rate(replisense_http_requests_total{environment=~\"$environment\",route!=\"/health\",route!=\"/ready\"}[5m]))",
+            "legendFormat": "{{service}}"
           }
         ],
         "fieldConfig": {
@@ -210,8 +1057,44 @@
         }
       },
       {
+        "id": 5,
+        "title": "Response time \u00b7 95th percentile",
+        "type": "timeseries",
+        "description": "Includes document uploads/processing; not an interactive API-only SLO.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 8,
+          "y": 23,
+          "w": 8,
+          "h": 6
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "(histogram_quantile(0.95, sum by (le,environment,service) (rate(replisense_http_request_duration_seconds_bucket{environment=~\"$environment\",route!=\"/health\",route!=\"/ready\"}[5m])))) and on(environment,service) (sum by(environment,service) (increase(replisense_http_request_duration_seconds_count{environment=~\"$environment\",route!=\"/health\",route!=\"/ready\"}[5m])) > 0)",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "noValue": "No measured requests"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
         "id": 4,
-        "title": "HTTP 5xx / ten minutes",
+        "title": "Server errors \u00b7 last 10 minutes",
         "type": "timeseries",
         "description": "",
         "datasource": {
@@ -219,16 +1102,71 @@
           "uid": "grafanacloud-prom"
         },
         "gridPos": {
-          "x": 12,
-          "y": 8,
-          "w": 12,
-          "h": 8
+          "x": 16,
+          "y": 23,
+          "w": 8,
+          "h": 6
         },
         "targets": [
           {
             "refId": "A",
-            "expr": "sum by (environment,service) (increase(replisense_http_requests_total{environment=~\"$environment\",status_code=~\"5..\"}[10m]))",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+            "expr": "(sum by(environment) (increase(replisense_http_requests_total{environment=~\"$environment\",status_code=~\"5..\"}[10m]))) or on(environment) ((0 * (min by(environment) (up{environment=~\"$environment\",job=\"replisense-node-api\"}) == 1)) and on(environment) (max by(environment) (time() - timestamp(up{environment=~\"$environment\",job=\"replisense-node-api\"})) < 180))",
+            "legendFormat": "{{environment}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "noValue": "No telemetry",
+            "min": 0,
+            "decimals": 0,
+            "custom": {
+              "axisSoftMax": 3
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 29,
+        "title": "AI usage \u2014 application activity, not a provider bill",
+        "type": "row",
+        "collapsed": false,
+        "panels": [],
+        "targets": [],
+        "gridPos": {
+          "x": 0,
+          "y": 29,
+          "w": 24,
+          "h": 1
+        }
+      },
+      {
+        "id": 13,
+        "title": "AI provider calls / hour",
+        "type": "timeseries",
+        "description": "Application provider calls, including repeated calls. SDK-internal retries are not counted separately.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 30,
+          "w": 12,
+          "h": 6
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum by (provider,outcome) (increase(replisense_llm_requests_total{environment=~\"$environment\"}[1h])) > 0",
+            "legendFormat": "{{provider}} \u00b7 {{outcome}}"
           }
         ],
         "fieldConfig": {
@@ -246,30 +1184,30 @@
         }
       },
       {
-        "id": 5,
-        "title": "HTTP latency p95",
+        "id": 14,
+        "title": "AI reported tokens / hour",
         "type": "timeseries",
-        "description": "Includes document uploads/processing; not an interactive API-only SLO.",
+        "description": "Provider-reported input/output usage, not a billing estimate. Overlapping total/cache counts are omitted. Zero-only providers are hidden; other applications sharing credentials are not visible here.",
         "datasource": {
           "type": "prometheus",
           "uid": "grafanacloud-prom"
         },
         "gridPos": {
-          "x": 0,
-          "y": 16,
+          "x": 12,
+          "y": 30,
           "w": 12,
-          "h": 8
+          "h": 6
         },
         "targets": [
           {
             "refId": "A",
-            "expr": "histogram_quantile(0.95, sum by (le,environment,service) (rate(replisense_http_request_duration_seconds_bucket{environment=~\"$environment\"}[5m])))",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+            "expr": "sum by (provider,kind) (increase(replisense_llm_tokens_total{environment=~\"$environment\",kind=~\"input_tokens|output_tokens\"}[1h])) > 0",
+            "legendFormat": "{{provider}} \u00b7 {{kind}}"
           }
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "s",
+            "unit": "short",
             "noValue": "Awaiting data"
           },
           "overrides": []
@@ -282,25 +1220,181 @@
         }
       },
       {
-        "id": 6,
-        "title": "TLS expiry (days)",
+        "id": 30,
+        "title": "Technical details \u2014 dependencies, capacity and certificates",
+        "type": "row",
+        "collapsed": false,
+        "panels": [],
+        "targets": [],
+        "gridPos": {
+          "x": 0,
+          "y": 36,
+          "w": 24,
+          "h": 1
+        }
+      },
+      {
+        "id": 1,
+        "title": "QC dependency overview",
+        "type": "nodeGraph",
+        "description": "Configured dependencies with live health checks; arrows are architectural relationships, NOT request traces or measured flow. DB/cache is Node's combined readiness check, not a separate MongoDB probe.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 37,
+          "w": 12,
+          "h": 12
+        },
+        "targets": [
+          {
+            "refId": "nodes",
+            "expr": "sum by(id,title,mainstat) (label_join(label_replace(label_replace((label_replace(((max by(environment) (probe_success{environment=~\"$environment\",service=\"frontend\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 0), \"mainstat\", \"Down\", \"\", \"\") or label_replace(((max by(environment) (probe_success{environment=~\"$environment\",service=\"frontend\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 1), \"mainstat\", \"Healthy\", \"\", \"\") or label_replace(((max by(environment) (probe_success{environment=~\"$environment\",service=\"frontend\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 2), \"mainstat\", \"Unknown\", \"\", \"\")), \"node\", \"website\", \"\", \"\"), \"title\", \"Website\", \"\", \"\"), \"id\", \".\", \"environment\", \"node\")) or sum by(id,title,mainstat) (label_join(label_replace(label_replace((label_replace(((max by(environment) (up{environment=~\"$environment\",service=\"node-api\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 0), \"mainstat\", \"Down\", \"\", \"\") or label_replace(((max by(environment) (up{environment=~\"$environment\",service=\"node-api\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 1), \"mainstat\", \"Healthy\", \"\", \"\") or label_replace(((max by(environment) (up{environment=~\"$environment\",service=\"node-api\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 2), \"mainstat\", \"Unknown\", \"\", \"\")), \"node\", \"api\", \"\", \"\"), \"title\", \"Node API\", \"\", \"\"), \"id\", \".\", \"environment\", \"node\")) or sum by(id,title,mainstat) (label_join(label_replace(label_replace((label_replace(((max by(environment) (up{environment=~\"$environment\",service=\"qc-worker\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 0), \"mainstat\", \"Down\", \"\", \"\") or label_replace(((max by(environment) (up{environment=~\"$environment\",service=\"qc-worker\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 1), \"mainstat\", \"Healthy\", \"\", \"\") or label_replace(((max by(environment) (up{environment=~\"$environment\",service=\"qc-worker\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 2), \"mainstat\", \"Unknown\", \"\", \"\")), \"node\", \"worker\", \"\", \"\"), \"title\", \"QC worker\", \"\", \"\"), \"id\", \".\", \"environment\", \"node\")) or sum by(id,title,mainstat) (label_join(label_replace(label_replace((label_replace(((max by(environment) (up{environment=~\"$environment\",service=\"python-gateway\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 0), \"mainstat\", \"Down\", \"\", \"\") or label_replace(((max by(environment) (up{environment=~\"$environment\",service=\"python-gateway\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 1), \"mainstat\", \"Healthy\", \"\", \"\") or label_replace(((max by(environment) (up{environment=~\"$environment\",service=\"python-gateway\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 2), \"mainstat\", \"Unknown\", \"\", \"\")), \"node\", \"python\", \"\", \"\"), \"title\", \"Python QC\", \"\", \"\"), \"id\", \".\", \"environment\", \"node\")) or sum by(id,title,mainstat) (label_join(label_replace(label_replace((label_replace(((max by(environment) (probe_success{environment=~\"$environment\",service=\"document-engine\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 0), \"mainstat\", \"Down\", \"\", \"\") or label_replace(((max by(environment) (probe_success{environment=~\"$environment\",service=\"document-engine\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 1), \"mainstat\", \"Healthy\", \"\", \"\") or label_replace(((max by(environment) (probe_success{environment=~\"$environment\",service=\"document-engine\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 2), \"mainstat\", \"Unknown\", \"\", \"\")), \"node\", \"docx\", \"\", \"\"), \"title\", \"DOCX engine\", \"\", \"\"), \"id\", \".\", \"environment\", \"node\")) or sum by(id,title,mainstat) (label_join(label_replace(label_replace((label_replace(((max by(environment) (probe_success{environment=~\"$environment\",service=\"node-dependencies\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 0), \"mainstat\", \"Down\", \"\", \"\") or label_replace(((max by(environment) (probe_success{environment=~\"$environment\",service=\"node-dependencies\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 1), \"mainstat\", \"Healthy\", \"\", \"\") or label_replace(((max by(environment) (probe_success{environment=~\"$environment\",service=\"node-dependencies\"}) or on(environment) (2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"})))) == 2), \"mainstat\", \"Unknown\", \"\", \"\")), \"node\", \"storage\", \"\", \"\"), \"title\", \"DB / cache readiness\", \"\", \"\"), \"id\", \".\", \"environment\", \"node\"))",
+            "format": "table",
+            "instant": true,
+            "range": false
+          },
+          {
+            "refId": "edges",
+            "expr": "sum by(id,source,target) (label_join(label_join(label_join(label_replace((label_replace((label_replace((2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"}))), \"edge\", \"website-api\", \"\", \"\")), \"source_node\", \"website\", \"\", \"\")), \"target_node\", \"api\", \"\", \"\"), \"id\", \".\", \"environment\", \"edge\"), \"source\", \".\", \"environment\", \"source_node\"), \"target\", \".\", \"environment\", \"target_node\")) or sum by(id,source,target) (label_join(label_join(label_join(label_replace((label_replace((label_replace((2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"}))), \"edge\", \"api-worker\", \"\", \"\")), \"source_node\", \"api\", \"\", \"\")), \"target_node\", \"worker\", \"\", \"\"), \"id\", \".\", \"environment\", \"edge\"), \"source\", \".\", \"environment\", \"source_node\"), \"target\", \".\", \"environment\", \"target_node\")) or sum by(id,source,target) (label_join(label_join(label_join(label_replace((label_replace((label_replace((2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"}))), \"edge\", \"worker-python\", \"\", \"\")), \"source_node\", \"worker\", \"\", \"\")), \"target_node\", \"python\", \"\", \"\"), \"id\", \".\", \"environment\", \"edge\"), \"source\", \".\", \"environment\", \"source_node\"), \"target\", \".\", \"environment\", \"target_node\")) or sum by(id,source,target) (label_join(label_join(label_join(label_replace((label_replace((label_replace((2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"}))), \"edge\", \"api-docx\", \"\", \"\")), \"source_node\", \"api\", \"\", \"\")), \"target_node\", \"docx\", \"\", \"\"), \"id\", \".\", \"environment\", \"edge\"), \"source\", \".\", \"environment\", \"source_node\"), \"target\", \".\", \"environment\", \"target_node\")) or sum by(id,source,target) (label_join(label_join(label_join(label_replace((label_replace((label_replace((2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"}))), \"edge\", \"api-storage\", \"\", \"\")), \"source_node\", \"api\", \"\", \"\")), \"target_node\", \"storage\", \"\", \"\"), \"id\", \".\", \"environment\", \"edge\"), \"source\", \".\", \"environment\", \"source_node\"), \"target\", \".\", \"environment\", \"target_node\")) or sum by(id,source,target) (label_join(label_join(label_join(label_replace((label_replace((label_replace((2 + 0 * (max by(environment) (up{environment=~\"$environment\",job=~\"replisense-.*\"}))), \"edge\", \"worker-storage\", \"\", \"\")), \"source_node\", \"worker\", \"\", \"\")), \"target_node\", \"storage\", \"\", \"\"), \"id\", \".\", \"environment\", \"edge\"), \"source\", \".\", \"environment\", \"source_node\"), \"target\", \".\", \"environment\", \"target_node\"))",
+            "format": "table",
+            "instant": true,
+            "range": false
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                },
+                {
+                  "color": "gray",
+                  "value": 2
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "zoomMode": "cooperative",
+          "layoutAlgorithm": "layered",
+          "nodes": {},
+          "edges": {}
+        },
+        "transformations": [
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "^Value(?: #.*)?$",
+              "renamePattern": "color"
+            }
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Metrics collection",
         "type": "stat",
-        "description": "",
+        "description": "Missing series means not configured, NOT healthy. QC internal metrics need an outbound collector or private tunnel.",
         "datasource": {
           "type": "prometheus",
           "uid": "grafanacloud-prom"
         },
         "gridPos": {
           "x": 12,
-          "y": 16,
+          "y": 37,
           "w": 12,
-          "h": 8
+          "h": 4
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "up{environment=~\"$environment\",job=~\"replisense-.*\"}",
+            "legendFormat": "{{job}}",
+            "instant": true,
+            "range": false
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "noValue": "Awaiting data",
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {
+                    "text": "Unavailable",
+                    "color": "red",
+                    "index": 0
+                  },
+                  "1": {
+                    "text": "Available",
+                    "color": "green",
+                    "index": 1
+                  }
+                }
+              }
+            ]
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          },
+          "graphMode": "none",
+          "colorMode": "value",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "text": {
+            "valueSize": 22,
+            "titleSize": 13
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "TLS expiry (days)",
+        "type": "stat",
+        "description": "Public website/API certificate days remaining. Warning below 30 days, critical below 14. This is not the private origin certificate.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "gridPos": {
+          "x": 12,
+          "y": 41,
+          "w": 6,
+          "h": 5
         },
         "targets": [
           {
             "refId": "A",
             "expr": "(probe_ssl_earliest_cert_expiry{environment=~\"$environment\",job=\"blackbox-http\"} - time()) / 86400",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+            "legendFormat": "{{service}}",
+            "instant": true,
+            "range": false
           }
         ],
         "fieldConfig": {
@@ -344,150 +1438,10 @@
             ],
             "fields": "",
             "values": false
-          }
-        }
-      },
-      {
-        "id": 7,
-        "title": "QC lifecycle events / hour",
-        "type": "timeseries",
-        "description": "Lifecycle event counter, not current MongoDB job totals or quota usage; counters reset at restart.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
-        },
-        "gridPos": {
-          "x": 0,
-          "y": 24,
-          "w": 12,
-          "h": 8
-        },
-        "targets": [
-          {
-            "refId": "A",
-            "expr": "sum by (environment,status) (increase(replisense_qc_runs_total{environment=~\"$environment\"}[1h]))",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short",
-            "noValue": "Awaiting data"
           },
-          "overrides": []
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
-          }
-        }
-      },
-      {
-        "id": 8,
-        "title": "QC worker failures / hour",
-        "type": "timeseries",
-        "description": "Failed engine attempts; retries may later succeed. Private worker endpoint required.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
-        },
-        "gridPos": {
-          "x": 12,
-          "y": 24,
-          "w": 12,
-          "h": 8
-        },
-        "targets": [
-          {
-            "refId": "A",
-            "expr": "sum by (environment,worker) (increase(replisense_worker_jobs_failed_total{environment=~\"$environment\",worker=\"qc-worker\"}[1h]))",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short",
-            "noValue": "Awaiting data"
-          },
-          "overrides": []
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
-          }
-        }
-      },
-      {
-        "id": 9,
-        "title": "QC duration p95",
-        "type": "timeseries",
-        "description": "Requires worker-process metrics; never infer duration from API-only metrics.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
-        },
-        "gridPos": {
-          "x": 0,
-          "y": 32,
-          "w": 12,
-          "h": 8
-        },
-        "targets": [
-          {
-            "refId": "A",
-            "expr": "histogram_quantile(0.95, sum by (le,environment,worker) (rate(replisense_worker_job_duration_seconds_bucket{environment=~\"$environment\",worker=\"qc-worker\"}[1h])))",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "s",
-            "noValue": "Awaiting data"
-          },
-          "overrides": []
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
-          }
-        }
-      },
-      {
-        "id": 10,
-        "title": "QC findings / hour",
-        "type": "timeseries",
-        "description": "Requires worker metrics. Findings are not application incidents.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
-        },
-        "gridPos": {
-          "x": 12,
-          "y": 32,
-          "w": 12,
-          "h": 8
-        },
-        "targets": [
-          {
-            "refId": "A",
-            "expr": "sum by (environment,severity) (increase(replisense_qc_issues_found_total{environment=~\"$environment\"}[1h]))",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short",
-            "noValue": "Awaiting data"
-          },
-          "overrides": []
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
+          "text": {
+            "valueSize": 28,
+            "titleSize": 13
           }
         }
       },
@@ -501,16 +1455,16 @@
           "uid": "grafanacloud-prom"
         },
         "gridPos": {
-          "x": 0,
-          "y": 40,
-          "w": 12,
-          "h": 8
+          "x": 18,
+          "y": 41,
+          "w": 6,
+          "h": 5
         },
         "targets": [
           {
             "refId": "A",
             "expr": "time() - replisense_worker_heartbeat_timestamp_seconds{environment=~\"$environment\"}",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+            "legendFormat": "QC worker"
           }
         ],
         "fieldConfig": {
@@ -528,212 +1482,8 @@
         }
       },
       {
-        "id": 12,
-        "title": "Active monitoring alerts",
-        "type": "alertlist",
-        "description": "",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
-        },
-        "gridPos": {
-          "x": 12,
-          "y": 40,
-          "w": 12,
-          "h": 8
-        },
-        "targets": [],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short",
-            "noValue": "Awaiting data"
-          },
-          "overrides": []
-        },
-        "options": {
-          "viewMode": "list",
-          "maxItems": 10,
-          "alertName": "QC",
-          "stateFilter": {
-            "firing": true,
-            "pending": true
-          },
-          "showOptions": "current"
-        }
-      },
-      {
-        "id": 13,
-        "title": "Gemini invocations / hour",
-        "type": "timeseries",
-        "description": "Application provider calls, including repeated calls. SDK-internal retries are not counted separately.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
-        },
-        "gridPos": {
-          "x": 0,
-          "y": 48,
-          "w": 12,
-          "h": 8
-        },
-        "targets": [
-          {
-            "refId": "A",
-            "expr": "sum by (model,outcome) (increase(replisense_llm_requests_total{environment=~\"$environment\"}[1h]))",
-            "legendFormat": "{{outcome}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short",
-            "noValue": "Awaiting data"
-          },
-          "overrides": []
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
-          }
-        }
-      },
-      {
-        "id": 14,
-        "title": "Gemini reported tokens / hour",
-        "type": "timeseries",
-        "description": "Total includes provider-reported thinking usage. Not a billing estimate; activity by other apps sharing the key is not visible here.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
-        },
-        "gridPos": {
-          "x": 12,
-          "y": 48,
-          "w": 12,
-          "h": 8
-        },
-        "targets": [
-          {
-            "refId": "A",
-            "expr": "sum by (kind) (increase(replisense_llm_tokens_total{environment=~\"$environment\"}[1h]))",
-            "legendFormat": "{{kind}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short",
-            "noValue": "Awaiting data"
-          },
-          "overrides": []
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
-          }
-        }
-      },
-      {
-        "id": 15,
-        "title": "Reviewed DOCX exports / hour",
-        "type": "timeseries",
-        "description": "One event per claimed export attempt; repeated reads of an already-ready export do not increment.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
-        },
-        "gridPos": {
-          "x": 0,
-          "y": 56,
-          "w": 12,
-          "h": 8
-        },
-        "targets": [
-          {
-            "refId": "A",
-            "expr": "sum by (outcome) (increase(replisense_qc_exports_total{environment=~\"$environment\"}[1h]))",
-            "legendFormat": "{{outcome}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short",
-            "noValue": "Awaiting data"
-          },
-          "overrides": []
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
-          }
-        }
-      },
-      {
-        "id": 16,
-        "title": "Dependency availability",
-        "type": "stat",
-        "description": "Node readiness checks MongoDB connection and Redis readiness; Redis TCP and document-engine HTTP health are also probed.",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "grafanacloud-prom"
-        },
-        "gridPos": {
-          "x": 12,
-          "y": 56,
-          "w": 12,
-          "h": 8
-        },
-        "targets": [
-          {
-            "refId": "A",
-            "expr": "probe_success{environment=~\"$environment\",service=~\"node-dependencies|document-engine|redis\"}",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short",
-            "noValue": "Awaiting data",
-            "mappings": [
-              {
-                "type": "value",
-                "options": {
-                  "0": {
-                    "text": "Unavailable",
-                    "color": "red",
-                    "index": 0
-                  },
-                  "1": {
-                    "text": "Available",
-                    "color": "green",
-                    "index": 1
-                  }
-                }
-              }
-            ]
-          },
-          "overrides": []
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
-          },
-          "graphMode": "none",
-          "colorMode": "value",
-          "reduceOptions": {
-            "calcs": [
-              "lastNotNull"
-            ],
-            "fields": "",
-            "values": false
-          }
-        }
-      },
-      {
         "id": 17,
-        "title": "Host CPU utilization",
+        "title": "Server CPU usage",
         "type": "timeseries",
         "description": "Aggregate QC host CPU; no Docker socket or privileged exporter is used.",
         "datasource": {
@@ -742,15 +1492,15 @@
         },
         "gridPos": {
           "x": 0,
-          "y": 64,
+          "y": 49,
           "w": 12,
-          "h": 8
+          "h": 5
         },
         "targets": [
           {
             "refId": "A",
             "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{environment=~\"$environment\",mode=\"idle\"}[5m])))",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+            "legendFormat": "Server"
           }
         ],
         "fieldConfig": {
@@ -769,7 +1519,7 @@
       },
       {
         "id": 18,
-        "title": "Host memory utilization",
+        "title": "Server memory usage",
         "type": "timeseries",
         "description": "",
         "datasource": {
@@ -778,15 +1528,15 @@
         },
         "gridPos": {
           "x": 12,
-          "y": 64,
+          "y": 49,
           "w": 12,
-          "h": 8
+          "h": 5
         },
         "targets": [
           {
             "refId": "A",
             "expr": "100 * (1 - node_memory_MemAvailable_bytes{environment=~\"$environment\"} / node_memory_MemTotal_bytes{environment=~\"$environment\"})",
-            "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}"
+            "legendFormat": "{{environment}}"
           }
         ],
         "fieldConfig": {
@@ -814,14 +1564,14 @@
         },
         "gridPos": {
           "x": 0,
-          "y": 72,
-          "w": 12,
-          "h": 8
+          "y": 54,
+          "w": 24,
+          "h": 5
         },
         "targets": [
           {
             "refId": "A",
-            "expr": "{environment=~\"$environment\",job=\"replisense-ops\"}",
+            "expr": "{environment=~\"$environment\",job=\"replisense-ops\"} | json | line_format \"{{.event}}\"",
             "legendFormat": "{{environment}} {{service}} {{worker}} {{status}} {{severity}}",
             "datasource": {
               "type": "loki",
@@ -837,9 +1587,88 @@
           "overrides": []
         },
         "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom"
+          "showTime": true,
+          "showLabels": false,
+          "showCommonLabels": false,
+          "wrapLogMessage": true,
+          "prettifyLogMessage": false,
+          "sortOrder": "Descending",
+          "enableLogDetails": true
+        }
+      },
+      {
+        "id": 31,
+        "title": "Telemetry freshness",
+        "type": "stat",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "description": "Age of the oldest visible API/worker/Python/host scrape sample. Below three minutes is fresh. A missing target is also detected by Monitoring coverage; no series means unknown, not fresh.",
+        "gridPos": {
+          "x": 20,
+          "y": 1,
+          "w": 4,
+          "h": 5
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "max(time() - timestamp(up{environment=~\"$environment\",job=~\"replisense-(node-api|qc-worker|python-gateway|host)\"}))",
+            "instant": true,
+            "range": false
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "min": 0,
+            "decimals": 0,
+            "noValue": "Not reporting",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 180
+                },
+                {
+                  "color": "red",
+                  "value": 300
+                }
+              ]
+            },
+            "mappings": [
+              {
+                "type": "special",
+                "options": {
+                  "match": "null",
+                  "result": {
+                    "text": "Not reporting",
+                    "color": "gray"
+                  }
+                }
+              }
+            ]
+          },
+          "overrides": []
+        },
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
           }
         }
       }
