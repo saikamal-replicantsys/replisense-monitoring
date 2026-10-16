@@ -1,0 +1,88 @@
+{
+  "groups": [
+    {
+      "name": "replisense-writer",
+      "interval": "1m",
+      "rules": [
+        {
+          "alert": "WriterWorkerUnavailable",
+          "expr": "up{job=\"replisense-writer-worker\"} == 0",
+          "for": "3m",
+          "labels": {
+            "severity": "warning",
+            "module": "writer"
+          },
+          "annotations": {
+            "summary": "WriterWorkerUnavailable",
+            "description": "Inspect the Writer dashboard, collector freshness and sanitised diagnostics. Never include source content or credentials in incident messages."
+          }
+        },
+        {
+          "alert": "WriterHeartbeatStale",
+          "expr": "(time() - replisense_worker_heartbeat_timestamp_seconds{worker=\"writer-worker\"} > 120) and on(environment) (max by(environment) (up{job=\"replisense-writer-worker\"}) == 1)",
+          "for": "2m",
+          "labels": {
+            "severity": "warning",
+            "module": "writer"
+          },
+          "annotations": {
+            "summary": "WriterHeartbeatStale",
+            "description": "Inspect the Writer dashboard, collector freshness and sanitised diagnostics. Never include source content or credentials in incident messages."
+          }
+        },
+        {
+          "alert": "WriterQueueSnapshotStale",
+          "expr": "(time() - replisense_writer_queue_snapshot_timestamp_seconds{job=\"replisense-writer-worker\"} > 180) and on(environment) (max by(environment) (up{job=\"replisense-writer-worker\"}) == 1)",
+          "for": "2m",
+          "labels": {
+            "severity": "warning",
+            "module": "writer"
+          },
+          "annotations": {
+            "summary": "WriterQueueSnapshotStale",
+            "description": "Inspect the Writer dashboard, collector freshness and sanitised diagnostics. Never include source content or credentials in incident messages."
+          }
+        },
+        {
+          "alert": "WriterGenerationQueueDelayed",
+          "expr": "(replisense_writer_generation_oldest_queued_seconds{job=\"replisense-writer-worker\"} > 1800) and on(environment) (time() - replisense_writer_queue_snapshot_timestamp_seconds{job=\"replisense-writer-worker\"} < 180) and on(environment) (max by(environment) (up{job=\"replisense-writer-worker\"}) == 1)",
+          "for": "5m",
+          "labels": {
+            "severity": "warning",
+            "module": "writer"
+          },
+          "annotations": {
+            "summary": "WriterGenerationQueueDelayed",
+            "description": "Inspect the Writer dashboard, collector freshness and sanitised diagnostics. Never include source content or credentials in incident messages."
+          }
+        },
+        {
+          "alert": "WriterGenerationInterrupted",
+          "expr": "(replisense_writer_generation_jobs{job=\"replisense-writer-worker\",status=\"interrupted\"} > 0) and on(environment) (time() - replisense_writer_queue_snapshot_timestamp_seconds{job=\"replisense-writer-worker\"} < 180) and on(environment) (max by(environment) (up{job=\"replisense-writer-worker\"}) == 1)",
+          "for": "2m",
+          "labels": {
+            "severity": "warning",
+            "module": "writer"
+          },
+          "annotations": {
+            "summary": "WriterGenerationInterrupted",
+            "description": "Inspect the Writer dashboard, collector freshness and sanitised diagnostics. Never include source content or credentials in incident messages."
+          }
+        },
+        {
+          "alert": "WriterProcessingFailures",
+          "expr": "sum by(environment) (increase(replisense_writer_operations_total{outcome=~\"failed|partial\",operation=~\"generation|export_.*|preview\"}[15m])) > 0",
+          "for": "0m",
+          "labels": {
+            "severity": "warning",
+            "module": "writer"
+          },
+          "annotations": {
+            "summary": "WriterProcessingFailures",
+            "description": "Inspect the Writer dashboard, collector freshness and sanitised diagnostics. Never include source content or credentials in incident messages."
+          }
+        }
+      ]
+    }
+  ]
+}

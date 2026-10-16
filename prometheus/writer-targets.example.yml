@@ -1,0 +1,6 @@
+# Opt-in only: copy to prometheus/targets/writer/<environment>.yml on a full Writer deployment.
+# Do not enable for qc-evaluation. The target must be reachable only on a private container network.
+- targets: ["writer-worker:9103"]
+  labels:
+    environment: demo
+    service: writer-worker
