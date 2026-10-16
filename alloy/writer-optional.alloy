@@ -1,0 +1,19 @@
+// Full-platform collector fragment ONLY. Never add this to the QC-only collector.
+// Its existing prometheus.remote_write.cloud must have the correct environment label.
+prometheus.scrape "writer" {
+  targets = [{ __address__ = "writer-worker:9103", job = "replisense-writer-worker", service = "writer-worker" }]
+  scrape_interval = "60s"
+  authorization {
+    type = "Bearer"
+    credentials_file = "/run/credentials/observability-token"
+  }
+  forward_to = [prometheus.relabel.writer.receiver]
+}
+prometheus.relabel "writer" {
+  forward_to = [prometheus.remote_write.cloud.receiver]
+  rule {
+    source_labels = ["__name__"]
+    regex = "up|scrape_.*|replisense_writer_.*|replisense_worker_heartbeat_timestamp_seconds"
+    action = "keep"
+  }
+}

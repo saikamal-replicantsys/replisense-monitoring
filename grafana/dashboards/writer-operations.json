@@ -1,0 +1,323 @@
+{
+  "uid": "replisense-writer-operations",
+  "title": "RepliSense Writer Operations",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": [
+    "replisense",
+    "writer"
+  ],
+  "refresh": "1m",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "type": "datasource",
+        "query": "prometheus"
+      },
+      {
+        "name": "environment",
+        "type": "custom",
+        "query": "local,demo,prod",
+        "current": {
+          "text": "local",
+          "value": "local"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Generation worker heartbeat age",
+      "description": "Live heartbeat age. Missing data means not reporting, not healthy.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - replisense_worker_heartbeat_timestamp_seconds{environment=~\"$environment\",worker=\"writer-worker\"}",
+          "legendFormat": "{{operation}} {{outcome}} {{type}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "Not reporting"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 2,
+      "title": "Waiting to generate",
+      "description": "Latest durable job per document, including delayed partial retries. Not document quota.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "replisense_writer_generation_jobs{environment=~\"$environment\",job=\"replisense-writer-worker\",status=\"queued\"} and on(environment) (time() - replisense_writer_queue_snapshot_timestamp_seconds{environment=~\"$environment\",job=\"replisense-writer-worker\"} < 180)",
+          "legendFormat": "{{operation}} {{outcome}} {{type}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not reporting"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 3,
+      "title": "Oldest queued job",
+      "description": "Includes delayed section resumes. Check snapshot freshness before interpreting.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "replisense_writer_generation_oldest_queued_seconds{environment=~\"$environment\",job=\"replisense-writer-worker\"} and on(environment) (time() - replisense_writer_queue_snapshot_timestamp_seconds{environment=~\"$environment\",job=\"replisense-writer-worker\"} < 180)",
+          "legendFormat": "{{operation}} {{outcome}} {{type}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "Not reporting"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 4,
+      "title": "Generation outcomes",
+      "description": "Sampled attempt counts, including partial outcomes; not unique documents.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(outcome) (increase(replisense_writer_operations_total{environment=~\"$environment\",operation=\"generation\"}[$__range]))",
+          "legendFormat": "{{operation}} {{outcome}} {{type}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not reporting"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 5,
+      "title": "Export outcomes",
+      "description": "Actual export processing outcomes, not submissions or downloads.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(operation,outcome) (increase(replisense_writer_operations_total{environment=~\"$environment\",operation=~\"export_.*\"}[$__range]))",
+          "legendFormat": "{{operation}} {{outcome}} {{type}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not reporting"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 6,
+      "title": "Generation duration \u00b7 p95",
+      "description": "Estimated p95 over one hour. Sparse samples are not an SLA.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95,sum by(le) (rate(replisense_writer_operation_duration_seconds_bucket{environment=~\"$environment\",operation=\"generation\",outcome=\"success\"}[1h])))",
+          "legendFormat": "{{operation}} {{outcome}} {{type}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "Not reporting"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 7,
+      "title": "Reported AI tokens",
+      "description": "Upstream-reported input/output tokens. Excludes unreported failed calls; not a billing total.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 10,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(type) (increase(replisense_writer_reported_tokens_total{environment=~\"$environment\"}[$__range]))",
+          "legendFormat": "{{operation}} {{outcome}} {{type}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not reporting"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 8,
+      "title": "Preview outcomes",
+      "description": "Shared revision-preview processing attempts.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(outcome) (increase(replisense_writer_operations_total{environment=~\"$environment\",operation=\"preview\"}[$__range]))",
+          "legendFormat": "{{operation}} {{outcome}} {{type}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not reporting"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 9,
+      "title": "Queue snapshot age",
+      "description": "A stale/missing snapshot invalidates queue-count interpretation.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - replisense_writer_queue_snapshot_timestamp_seconds{environment=~\"$environment\",job=\"replisense-writer-worker\"}",
+          "legendFormat": "{{operation}} {{outcome}} {{type}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "Not reporting"
+        },
+        "overrides": []
+      },
+      "options": {}
+    }
+  ]
+}

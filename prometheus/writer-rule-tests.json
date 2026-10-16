@@ -1,0 +1,432 @@
+{
+  "rule_files": [
+    "rules/writer-alerts.json"
+  ],
+  "evaluation_interval": "1m",
+  "tests": [
+    {
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "up{environment=\"qc\",job=\"replisense-node-api\"}",
+          "values": "1x6"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "6m",
+          "alertname": "WriterWorkerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterHeartbeatStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterQueueSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationQueueDelayed",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationInterrupted",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterProcessingFailures",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "up{environment=\"demo\",job=\"replisense-writer-worker\"}",
+          "values": "0x6"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "6m",
+          "alertname": "WriterWorkerUnavailable",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "environment": "demo",
+                "job": "replisense-writer-worker",
+                "severity": "warning",
+                "module": "writer"
+              },
+              "exp_annotations": {
+                "summary": "WriterWorkerUnavailable",
+                "description": "Inspect the Writer dashboard, collector freshness and sanitised diagnostics. Never include source content or credentials in incident messages."
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterHeartbeatStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterQueueSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationQueueDelayed",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationInterrupted",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterProcessingFailures",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "up{environment=\"demo\",job=\"replisense-writer-worker\"}",
+          "values": "1x6"
+        },
+        {
+          "series": "replisense_worker_heartbeat_timestamp_seconds{environment=\"demo\",worker=\"writer-worker\"}",
+          "values": "0+60x6"
+        },
+        {
+          "series": "replisense_writer_queue_snapshot_timestamp_seconds{environment=\"demo\",job=\"replisense-writer-worker\"}",
+          "values": "0+60x6"
+        },
+        {
+          "series": "replisense_writer_queue_snapshot_timestamp_seconds{environment=\"demo\",job=\"replisense-node-api\"}",
+          "values": "0x6"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "6m",
+          "alertname": "WriterWorkerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterHeartbeatStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterQueueSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationQueueDelayed",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationInterrupted",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterProcessingFailures",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "up{environment=\"demo\",job=\"replisense-writer-worker\"}",
+          "values": "1x6"
+        },
+        {
+          "series": "replisense_worker_heartbeat_timestamp_seconds{environment=\"demo\",worker=\"writer-worker\"}",
+          "values": "0+60x6"
+        },
+        {
+          "series": "replisense_writer_queue_snapshot_timestamp_seconds{environment=\"demo\",job=\"replisense-writer-worker\"}",
+          "values": "0x6"
+        },
+        {
+          "series": "replisense_writer_queue_snapshot_timestamp_seconds{environment=\"demo\",job=\"replisense-node-api\"}",
+          "values": "0x6"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "6m",
+          "alertname": "WriterWorkerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterHeartbeatStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterQueueSnapshotStale",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "environment": "demo",
+                "job": "replisense-writer-worker",
+                "severity": "warning",
+                "module": "writer"
+              },
+              "exp_annotations": {
+                "summary": "WriterQueueSnapshotStale",
+                "description": "Inspect the Writer dashboard, collector freshness and sanitised diagnostics. Never include source content or credentials in incident messages."
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationQueueDelayed",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationInterrupted",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterProcessingFailures",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "up{environment=\"demo\",job=\"replisense-writer-worker\"}",
+          "values": "1x6"
+        },
+        {
+          "series": "replisense_worker_heartbeat_timestamp_seconds{environment=\"demo\",worker=\"writer-worker\"}",
+          "values": "0+60x6"
+        },
+        {
+          "series": "replisense_writer_queue_snapshot_timestamp_seconds{environment=\"demo\",job=\"replisense-writer-worker\"}",
+          "values": "0+60x6"
+        },
+        {
+          "series": "replisense_writer_queue_snapshot_timestamp_seconds{environment=\"demo\",job=\"replisense-node-api\"}",
+          "values": "0x6"
+        },
+        {
+          "series": "replisense_writer_generation_oldest_queued_seconds{environment=\"demo\",job=\"replisense-writer-worker\"}",
+          "values": "2000x6"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "6m",
+          "alertname": "WriterWorkerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterHeartbeatStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterQueueSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationQueueDelayed",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "environment": "demo",
+                "job": "replisense-writer-worker",
+                "severity": "warning",
+                "module": "writer"
+              },
+              "exp_annotations": {
+                "summary": "WriterGenerationQueueDelayed",
+                "description": "Inspect the Writer dashboard, collector freshness and sanitised diagnostics. Never include source content or credentials in incident messages."
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationInterrupted",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterProcessingFailures",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "up{environment=\"demo\",job=\"replisense-writer-worker\"}",
+          "values": "1x6"
+        },
+        {
+          "series": "replisense_worker_heartbeat_timestamp_seconds{environment=\"demo\",worker=\"writer-worker\"}",
+          "values": "0+60x6"
+        },
+        {
+          "series": "replisense_writer_queue_snapshot_timestamp_seconds{environment=\"demo\",job=\"replisense-writer-worker\"}",
+          "values": "0+60x6"
+        },
+        {
+          "series": "replisense_writer_queue_snapshot_timestamp_seconds{environment=\"demo\",job=\"replisense-node-api\"}",
+          "values": "0x6"
+        },
+        {
+          "series": "replisense_writer_generation_jobs{environment=\"demo\",job=\"replisense-writer-worker\",status=\"interrupted\"}",
+          "values": "1x6"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "6m",
+          "alertname": "WriterWorkerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterHeartbeatStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterQueueSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationQueueDelayed",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationInterrupted",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "environment": "demo",
+                "job": "replisense-writer-worker",
+                "status": "interrupted",
+                "severity": "warning",
+                "module": "writer"
+              },
+              "exp_annotations": {
+                "summary": "WriterGenerationInterrupted",
+                "description": "Inspect the Writer dashboard, collector freshness and sanitised diagnostics. Never include source content or credentials in incident messages."
+              }
+            }
+          ]
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterProcessingFailures",
+          "exp_alerts": []
+        }
+      ]
+    },
+    {
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "up{environment=\"demo\",job=\"replisense-writer-worker\"}",
+          "values": "1x6"
+        },
+        {
+          "series": "replisense_worker_heartbeat_timestamp_seconds{environment=\"demo\",worker=\"writer-worker\"}",
+          "values": "0+60x6"
+        },
+        {
+          "series": "replisense_writer_queue_snapshot_timestamp_seconds{environment=\"demo\",job=\"replisense-writer-worker\"}",
+          "values": "0+60x6"
+        },
+        {
+          "series": "replisense_writer_queue_snapshot_timestamp_seconds{environment=\"demo\",job=\"replisense-node-api\"}",
+          "values": "0x6"
+        },
+        {
+          "series": "replisense_writer_operations_total{environment=\"demo\",job=\"replisense-writer-worker\",operation=\"generation\",outcome=\"partial\"}",
+          "values": "0 1 1 1 1 1 1"
+        }
+      ],
+      "alert_rule_test": [
+        {
+          "eval_time": "6m",
+          "alertname": "WriterWorkerUnavailable",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterHeartbeatStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterQueueSnapshotStale",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationQueueDelayed",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterGenerationInterrupted",
+          "exp_alerts": []
+        },
+        {
+          "eval_time": "6m",
+          "alertname": "WriterProcessingFailures",
+          "exp_alerts": [
+            {
+              "exp_labels": {
+                "environment": "demo",
+                "severity": "warning",
+                "module": "writer"
+              },
+              "exp_annotations": {
+                "summary": "WriterProcessingFailures",
+                "description": "Inspect the Writer dashboard, collector freshness and sanitised diagnostics. Never include source content or credentials in incident messages."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
