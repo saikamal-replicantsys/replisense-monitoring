@@ -131,6 +131,11 @@ python scripts/configure_cloud_alerts.py --execute
 Eight QC-owned rules: missing collector/services, public HTTPS, dependencies,
 heartbeat, HTTP 5xx, operational failures, AI provider billing/authentication, TLS
 expiry. No-data means an outage for availability, but no error events is normal.
+
+The QC notification route uses the recurring `replisense-qc-off-hours` mute
+timing from 18:00 until 10:00 in `Asia/Kolkata`. Alert rules continue evaluating
+and remain visible while the EC2 host is intentionally stopped; only QC email
+delivery is muted. Other alert routes and environments are unaffected.
 Previous rules/policy are backed up under ignored `artifacts/`. Other-team/default
 routes remain unchanged; only the QC-labelled email route is added. Group wait
 30s, group interval 10m, repeat interval 4h; send resolved notifications.

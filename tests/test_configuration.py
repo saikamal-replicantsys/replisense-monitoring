@@ -159,6 +159,14 @@ class ConfigurationTests(unittest.TestCase):
         result = load("configure_email").config("smtp.example.com:587", "a", "b", "c")
         self.assertEqual([route["receiver"] for route in result["route"]["routes"]], ["disabled", "disabled"])
 
+    def test_qc_off_hours_mute_uses_ist_operating_window(self):
+        config = (ROOT / "scripts/configure_cloud_alerts.py").read_text()
+        self.assertIn('MUTE_NAME = "replisense-qc-off-hours"', config)
+        self.assertIn('{"start_time": "00:00", "end_time": "10:00"}', config)
+        self.assertIn('{"start_time": "18:00", "end_time": "24:00"}', config)
+        self.assertIn('"location": "Asia/Kolkata"', config)
+        self.assertIn('"mute_time_intervals": [MUTE_NAME]', config)
+
 
 if __name__ == "__main__":
     unittest.main()
