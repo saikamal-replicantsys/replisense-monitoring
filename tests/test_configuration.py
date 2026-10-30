@@ -70,7 +70,11 @@ class ConfigurationTests(unittest.TestCase):
         contact = json.loads((ROOT / "grafana/cloud/email.json").read_text())
         test = json.loads((ROOT / "grafana/cloud/email-test.json").read_text())
         self.assertEqual(contact["settings"], test["integration"]["settings"])
-        self.assertEqual(contact["settings"]["addresses"].split(";"), ["saikamal@replicantsys.com", "siddharth@replicantsys.com"])
+        self.assertEqual(contact["settings"]["addresses"].split(";"), [
+            "saikamal@replicantsys.com",
+            "siddharth@replicantsys.com",
+            "rahul@replicantsys.com",
+        ])
         self.assertFalse(contact["disableResolveMessage"])
 
     def test_live_alert_list_is_scoped_to_qc_and_includes_error_states(self):

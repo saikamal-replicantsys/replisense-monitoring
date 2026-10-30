@@ -111,10 +111,11 @@ gcx resources push -p grafana/cloud/folder.json
 gcx alert contact-points create -f grafana/cloud/email.json
 ```
 
-Create the contact point once; inspect before update. Current recipients are
-`saikamal@replicantsys.com` and `siddharth@replicantsys.com`. Rahul is pending
-the next-month free-plan access decision; do not invite him or enable a paid
-plan automatically. This stack rejects email recipients who are not members.
+Create the contact point once; inspect before update. Configured recipients are
+`saikamal@replicantsys.com`, `siddharth@replicantsys.com`, and
+`rahul@replicantsys.com`. This stack rejects email recipients who are not members;
+verify Rahul's existing membership before applying the contact point and do not
+enable a paid plan automatically.
 Sai, Siddharth and tech have already signed in this month; removing tech from
 notifications does not reduce that month's active-user count. See
 [RS-1142 / RS-1143 rollout](RS-1142-RS-1143.md).
