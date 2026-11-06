@@ -1,0 +1,4 @@
+- targets: ["doc-engine.replisense-demo.local:7001"]
+  labels:
+    environment: demo
+    service: document-engine
