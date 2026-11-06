@@ -27,3 +27,15 @@ tests:
       - eval_time: 3m
         alertname: WorkerHeartbeatStale
         exp_alerts: []
+  - interval: 1m
+    input_series:
+      - series: 'doc_engine_libreoffice_queued{environment="demo"}'
+        values: '15 15 15 15 15 15 15'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: DocumentEngineQueueSaturated
+        exp_alerts:
+          - exp_labels: {environment: demo, service: document-engine, severity: warning}
+            exp_annotations:
+              summary: "Document-engine conversion queue is near capacity (demo)"
+              description: "At least 15 conversions have remained queued for five minutes; inspect workload, processing latency, and task capacity."

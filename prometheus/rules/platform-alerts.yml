@@ -41,6 +41,27 @@ groups:
         annotations:
           summary: "Worker heartbeat stale: {{ $labels.worker }} ({{ $labels.environment }})"
           description: "Only detects stale exported series, not a never-configured endpoint. Pair with scrape availability once worker endpoints exist."
+      - alert: DocumentEngineQueueSaturated
+        expr: doc_engine_libreoffice_queued >= 15
+        for: 5m
+        labels: {severity: warning, service: document-engine}
+        annotations:
+          summary: "Document-engine conversion queue is near capacity ({{ $labels.environment }})"
+          description: "At least 15 conversions have remained queued for five minutes; inspect workload, processing latency, and task capacity."
+      - alert: DocumentEngineProcessingFailures
+        expr: sum by (environment) (increase(doc_engine_processing_failures_total[10m])) >= 3
+        for: 1m
+        labels: {severity: critical, service: document-engine}
+        annotations:
+          summary: "Repeated document-engine processing failures ({{ $labels.environment }})"
+          description: "At least three processing failures occurred in ten minutes. Client responses remain opaque; use request IDs and internal logs to diagnose."
+      - alert: DocumentEngineHighMemory
+        expr: doc_engine_process_resident_memory_bytes > 850 * 1024 * 1024
+        for: 10m
+        labels: {severity: warning, service: document-engine}
+        annotations:
+          summary: "Document-engine memory usage is high ({{ $labels.environment }})"
+          description: "Resident memory has exceeded 850 MiB for ten minutes on a 1 GiB task allocation."
       - alert: MonitoringAlwaysOn
         expr: vector(1)
         labels: {severity: heartbeat, environment: monitoring}
