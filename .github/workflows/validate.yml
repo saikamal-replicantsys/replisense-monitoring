@@ -17,6 +17,13 @@ jobs:
       - run: docker compose -f alloy/compose.yaml config --quiet
       - run: docker run --rm -v "$PWD/alloy:/etc/alloy:ro" grafana/alloy:v1.20.1 validate /etc/alloy/config.alloy
       - run: docker compose config --quiet
-      - run: docker run --rm --entrypoint promtool -v "$PWD/prometheus:/etc/prometheus:ro" prom/prometheus:v3.11.2 check config /etc/prometheus/prometheus.yml
+      - name: Validate Prometheus configuration
+        run: |
+          mkdir -p .ci-secrets
+          printf 'ci-validation-only' > .ci-secrets/observability_token
+          docker run --rm --entrypoint promtool \
+            -v "$PWD/prometheus:/etc/prometheus:ro" \
+            -v "$PWD/.ci-secrets/observability_token:/run/secrets/observability_token:ro" \
+            prom/prometheus:v3.11.2 check config /etc/prometheus/prometheus.yml
       - run: docker run --rm --entrypoint promtool -v "$PWD/prometheus:/etc/prometheus:ro" prom/prometheus:v3.11.2 test rules /etc/prometheus/rule-tests.yml
       - run: docker run --rm --entrypoint amtool -v "$PWD/alertmanager:/etc/alertmanager:ro" prom/alertmanager:v0.32.0 check-config /etc/alertmanager/alertmanager.yml
